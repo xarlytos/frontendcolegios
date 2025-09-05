@@ -16,11 +16,11 @@ export class UniversidadesController {
         page = 1, 
         limit = 10, 
         search, 
-        estado = 'activa' // Agregar valor por defecto
+        activa // Sin valor por defecto para mostrar todos los colegios
       } = req.query;
 
       const skip = (Number(page) - 1) * Number(limit);
-      const filter: any = { estado: estado }; // Siempre filtrar por estado
+      const filter: any = {}; // Sin filtro por defecto
 
       // Aplicar filtros
       if (search) {
@@ -30,7 +30,10 @@ export class UniversidadesController {
         ];
       }
 
-      if (estado) filter.estado = estado;
+      // Solo filtrar por activa si se especifica explícitamente
+      if (activa !== undefined) {
+        filter.activa = activa === 'true';
+      }
 
       const universidades = await Universidad.find(filter)
         .sort({ nombre: 1 })
@@ -116,7 +119,7 @@ export class UniversidadesController {
   // Crear nueva universidad
   static async crearUniversidad(req: AuthRequest, res: Response) {
     try {
-      const { codigo, nombre } = req.body;
+      const { codigo, nombre, tipo, ciudad, activa } = req.body;
 
       // Solo admins pueden crear universidades
       if (req.user?.rol !== RolUsuario.ADMIN) {
@@ -126,9 +129,9 @@ export class UniversidadesController {
       }
 
       // Validaciones
-      if (!codigo || !nombre) {
+      if (!codigo || !nombre || !tipo || !ciudad) {
         return res.status(400).json({ 
-          error: 'Código y nombre son obligatorios' 
+          error: 'Código, nombre, tipo y ciudad son obligatorios' 
         });
       }
 
@@ -160,6 +163,9 @@ export class UniversidadesController {
       const nuevaUniversidad = new Universidad({
         codigo,
         nombre,
+        tipo,
+        ciudad,
+        activa: true, // Siempre activo
         creadoPor: new mongoose.Types.ObjectId(req.user.userId)
       });
 
@@ -173,7 +179,10 @@ export class UniversidadesController {
         entidadId: nuevaUniversidad._id.toString(),
         despues: {
           codigo: nuevaUniversidad.codigo,
-          nombre: nuevaUniversidad.nombre
+          nombre: nuevaUniversidad.nombre,
+          tipo: nuevaUniversidad.tipo,
+          ciudad: nuevaUniversidad.ciudad,
+          activa: nuevaUniversidad.activa
         }
       });
 
@@ -191,7 +200,7 @@ export class UniversidadesController {
   static async actualizarUniversidad(req: AuthRequest, res: Response) {
     try {
       const { id } = req.params;
-      const { nombre, codigo, estado } = req.body;
+      const { nombre, codigo, tipo, ciudad, activa } = req.body;
 
       // Solo admins pueden actualizar universidades
       if (req.user?.rol !== RolUsuario.ADMIN) {
@@ -226,13 +235,17 @@ export class UniversidadesController {
       const datosAnteriores = {
         nombre: universidad.nombre,
         codigo: universidad.codigo,
-        estado: universidad.estado
+        tipo: universidad.tipo,
+        ciudad: universidad.ciudad,
+        activa: universidad.activa
       };
 
       // Actualizar campos
       if (nombre) universidad.nombre = nombre;
       if (codigo) universidad.codigo = codigo;
-      if (estado) universidad.estado = estado;
+      if (tipo) universidad.tipo = tipo;
+      if (ciudad) universidad.ciudad = ciudad;
+      universidad.activa = true; // Siempre activo
 
       await universidad.save();
 
@@ -246,7 +259,9 @@ export class UniversidadesController {
         despues: {
           nombre: universidad.nombre,
           codigo: universidad.codigo,
-          estado: universidad.estado
+          tipo: universidad.tipo,
+          ciudad: universidad.ciudad,
+          activa: universidad.activa
         }
       });
 
@@ -282,7 +297,7 @@ export class UniversidadesController {
       }
 
       // Soft delete
-      universidad.estado = 'inactiva';
+      universidad.activa = false;
       await universidad.save();
 
       // Registrar en auditoría
@@ -294,12 +309,12 @@ export class UniversidadesController {
         antes: {
           nombre: universidad.nombre,
           codigo: universidad.codigo,
-          estado: 'activa'
+          activa: true
         },
         despues: {
           nombre: universidad.nombre,
           codigo: universidad.codigo,
-          estado: 'inactiva'
+          activa: false
         }
       });
 
@@ -320,7 +335,7 @@ export class UniversidadesController {
       
       const universidad = await Universidad.findOne({ 
         codigo: codigo.toUpperCase(),
-        estado: 'activa' 
+        activa: true 
       });
       console.log('🏫 Universidad found by codigo:', universidad ? universidad.toObject() : 'null');
       
@@ -378,7 +393,7 @@ export class UniversidadesController {
     try {
       console.log('🔍 obtenerUniversidadesConEstadisticas called');
       
-      const { estado = 'activa' } = req.query;
+      const { activa = 'true' } = req.query;
       const userId = req.user?.userId;
       const userRole = req.user?.rol;
       
@@ -419,7 +434,7 @@ export class UniversidadesController {
       });
       
       // Obtener universidades activas
-      const universidades = await Universidad.find({ estado })
+      const universidades = await Universidad.find({ activa: activa === 'true' })
         .sort({ nombre: 1 });
       
       console.log(`📚 Found ${universidades.length} universidades`);

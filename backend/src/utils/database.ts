@@ -1,4 +1,6 @@
 import mongoose from 'mongoose';
+import { Permiso } from '../models/Permiso';
+import { UsuarioPermiso } from '../models/UsuarioPermiso';
 
 export interface AuditLog {
   userId: string;
@@ -104,6 +106,36 @@ export class DatabaseUtils {
       return {};
     }
   }
+
+  /**
+   * Verifica si un usuario tiene un permiso específico
+   */
+  static async verificarPermisoUsuario(usuarioId: string, clavePermiso: string): Promise<boolean> {
+    try {
+      // Buscar el permiso por su clave
+      const permiso = await Permiso.findOne({ clave: clavePermiso });
+      if (!permiso) {
+        console.log(`❌ Permiso ${clavePermiso} no encontrado en el sistema`);
+        return false;
+      }
+
+      // Verificar si el usuario tiene este permiso asignado
+      const usuarioPermiso = await UsuarioPermiso.findOne({
+        usuarioId: usuarioId,
+        permisoId: permiso._id
+      });
+
+      const tienePermiso = !!usuarioPermiso;
+      console.log(`🔐 Usuario ${usuarioId} tiene permiso ${clavePermiso}:`, tienePermiso);
+      return tienePermiso;
+    } catch (error) {
+      console.error(`Error verificando permiso ${clavePermiso} para usuario ${usuarioId}:`, error);
+      return false;
+    }
+  }
 }
+
+// Exportar la función individualmente para facilitar el import
+export const verificarPermisoUsuario = DatabaseUtils.verificarPermisoUsuario;
 
 export default DatabaseUtils;

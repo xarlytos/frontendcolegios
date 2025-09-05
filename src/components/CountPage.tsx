@@ -22,6 +22,11 @@ export default function CountPage({ onNavigateToContacts, currentUser }: CountPa
   const [estadisticasGenerales, setEstadisticasGenerales] = useState<any>(null);
   const [comerciales, setComerciales] = useState<User[]>([]);
   const [loadingComerciales, setLoadingComerciales] = useState<boolean>(false);
+  
+  // Estados para el autocompletado de colegios
+  const [colegioInput, setColegioInput] = useState<string>('');
+  const [showColegioDropdown, setShowColegioDropdown] = useState<boolean>(false);
+  const [filteredColegios, setFilteredColegios] = useState<string[]>([]);
 
   const { getAllUsers } = useAuth();
   const { getJefeSubordinados } = usePermissions();
@@ -32,11 +37,36 @@ export default function CountPage({ onNavigateToContacts, currentUser }: CountPa
   // Agregar logs para debugging
   console.log('🎯 CountPage - Filtros actuales:', { selectedUniversidad, selectedCurso });
 
+  // CORREGIDO: Crear uniqueUniversidades desde allUniversidades (colegios activos de la BD)
+  const uniqueUniversidades = allUniversidades
+    .filter(uni => uni.activa !== false)
+    .map(uni => uni.nombre)
+    .sort((a: any, b: any) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
+
+  // Sincronizar el input con el estado seleccionado
+  useEffect(() => {
+    setColegioInput(selectedUniversidad);
+  }, [selectedUniversidad]);
+
+  // Filtrar colegios cuando se escribe en el input
+  useEffect(() => {
+    if (colegioInput.trim()) {
+      const filtered = uniqueUniversidades.filter(cole =>
+        cole.toLowerCase().includes(colegioInput.toLowerCase())
+      );
+      setFilteredColegios(filtered);
+      setShowColegioDropdown(true);
+    } else {
+      setFilteredColegios([]);
+      setShowColegioDropdown(false);
+    }
+  }, [colegioInput, uniqueUniversidades]);
+
   useEffect(() => {
     const fetchAllUniversidades = async () => {
       try {
         console.log('📥 Cargando todas las universidades con estadísticas...');
-        const response = await universidadesService.getUniversidadesConEstadisticas('activa');
+        const response = await universidadesService.getUniversidadesConEstadisticas(true);
         console.log('🏫 Universidades con estadísticas cargadas:', response);
         setAllUniversidades(response.universidades);
         setEstadisticasGenerales(response.estadisticasGenerales);
@@ -162,8 +192,8 @@ export default function CountPage({ onNavigateToContacts, currentUser }: CountPa
     
     // En filteredContacts (línea ~160)
     const filtered = allContacts.filter(contact => {
-    const matchesUniversidad = !selectedUniversidad || contact.universidad === selectedUniversidad;
-    const matchesCurso = !selectedCurso || contact.curso?.toString() === selectedCurso;
+    const matchesUniversidad = !selectedUniversidad || contact.nombre_colegio === selectedUniversidad;
+    const matchesCurso = !selectedCurso || (contact.año_nacimiento?.toString() === selectedCurso);
     
     // CORRECCIÓN: Manejar cuando getComercialVisibles es null (admin sin filtro)
     let matchesComercial = true;
@@ -175,7 +205,7 @@ export default function CountPage({ onNavigateToContacts, currentUser }: CountPa
     }
     
     const matches = matchesUniversidad && matchesCurso && matchesComercial;
-    console.log(`📋 Contacto ${contact.nombre}: Universidad(${matchesUniversidad}) + Curso(${matchesCurso}) + Comercial(${matchesComercial}) = ${matches}`);
+    console.log(`📋 Contacto ${contact.nombre}: Colegio(${matchesUniversidad}) + Año(${matchesCurso}) + Comercial(${matchesComercial}) = ${matches}`);
     
     return matches;
     });
@@ -184,144 +214,55 @@ export default function CountPage({ onNavigateToContacts, currentUser }: CountPa
     return filtered;
   }, [allUniversidades, allContacts, selectedUniversidad, selectedCurso, selectedComercial, getComercialVisibles]);
 
-  // NUEVO: Calcular estadísticas incluyendo TODAS las universidades disponibles
-  // Actualizar universityStats
-  const universityStats = useMemo(() => {
-    const stats: Record<string, UniversityStats> = {};
-    
-    // Primero, crear entradas para TODAS las universidades disponibles
-    allUniversidades.forEach(universidad => {
-      stats[universidad.nombre] = {
-        universidad: universidad.nombre,
-        total: 0,
-        titulaciones: []
-      };
-    });
-    
-    // Luego, contar contactos que coinciden con los filtros
-    // En universityStats (línea ~205)
-    allContacts.forEach(contact => {
-      if (stats[contact.universidad]) {
-        const matchesUniversidad = !selectedUniversidad || contact.universidad === selectedUniversidad;
-        const matchesCurso = !selectedCurso || contact.curso?.toString() === selectedCurso;
-        
-        // CORRECCIÓN: Manejar cuando getComercialVisibles es null
-        let matchesComercial = true;
-        if (selectedComercial && getComercialVisibles !== null) {
-          matchesComercial = getComercialVisibles.includes(contact.comercial_id);
-        }
-        
-        if (matchesUniversidad && matchesCurso && matchesComercial) {
-          stats[contact.universidad].total++;
-        }
-      }
-    });
+  // NUEVO: años de nacimiento presentes en los contactos filtrados (ordenados desc)
+  const birthYears = useMemo(() => {
+    const years = Array.from(new Set(filteredContacts.map(c => c.año_nacimiento).filter(Boolean))) as number[];
+    return years.sort((a, b) => a - b);
+  }, [filteredContacts]);
 
-    // Devolver TODAS las universidades, incluso las que tienen 0 contactos
-    const result = Object.values(stats).sort((a, b) => {
-      if (a.total !== b.total) {
-        return b.total - a.total; // Ordenar por total descendente
-      }
-      return a.universidad.localeCompare(b.universidad); // Luego alfabéticamente
-    });
+  // NUEVO: estadísticas por colegio y por año de nacimiento
+  const colegiosStats = useMemo(() => {
+    const stats: Record<string, { colegio: string; total: number; porAnio: Record<number, number>; porComercial: Record<string, number> }> = {};
     
-    console.log('📊 Estadísticas por universidad (incluyendo subordinados):', result);
-    return result;
-  }, [allUniversidades, allContacts, selectedUniversidad, selectedCurso, selectedComercial, getComercialVisibles]);
-
-  // NUEVO: Calcular estadísticas de titulación incluyendo TODAS las titulaciones disponibles
-  const titulationStats = useMemo(() => {
-    const stats: Record<string, TitulationStats & { porComercial?: Record<string, number>; school?: string }> = {};
-    
-    // Crear entradas para TODAS las titulaciones de TODAS las universidades
+    // Primero, inicializar todos los colegios activos (incluso sin contactos)
     allUniversidades.forEach(universidad => {
-      universidad.titulaciones.forEach(titulacion => {
-        const key = `${universidad.nombre}-${titulacion.nombre}`;
-        
-        // AGREGAR LOG PARA VER QUE TITULACIONES SE CREAN
-        if (universidad.nombre === 'FLORIDA') {
-          console.log('🏫 Creando entrada para FLORIDA:', key);
-        }
-        
-        stats[key] = {
-          titulacion: titulacion.nombre,
-          universidad: universidad.nombre,
-          total: 0,
-          porCurso: {},
-          porComercial: {},
-          school: universidad.codigo || 'Sin clasificar'
+      if (universidad.activa !== false) { // Solo colegios activos
+        stats[universidad.nombre] = { 
+          colegio: universidad.nombre, 
+          total: 0, 
+          porAnio: {}, 
+          porComercial: {} 
         };
-      });
+      }
     });
     
-    // Contar contactos que coinciden con los filtros actuales
-    allContacts.forEach(contact => {
-      const key = `${contact.universidad}-${contact.titulacion}`;
-      
-      // AGREGAR LOGS DE DEBUGGING
-      if (contact.nombre === 'Candela') {
-        console.log('🔍 DEBUGGING Candela:');
-        console.log('  - Clave generada:', key);
-        console.log('  - Universidad:', contact.universidad);
-        console.log('  - Titulación:', contact.titulacion);
-        console.log('  - ¿Existe en stats?:', !!stats[key]);
-        console.log('  - Claves disponibles en stats:', Object.keys(stats).filter(k => k.includes('FLORIDA')));
+    // Luego, agregar los datos de contactos filtrados
+    filteredContacts.forEach(contact => {
+      const colegio = contact.nombre_colegio || 'Sin colegio';
+      if (!stats[colegio]) {
+        stats[colegio] = { colegio, total: 0, porAnio: {}, porComercial: {} };
       }
-      
-      if (stats[key]) {
-        const matchesUniversidadFilter = !selectedUniversidad || contact.universidad === selectedUniversidad;
-        const matchesCursoFilter = !selectedCurso || contact.curso?.toString() === selectedCurso;
-        
-        // CORRECCIÓN: Filtro por comercial (incluyendo subordinados)
-        let matchesComercial = true;
-        if (selectedComercial && getComercialVisibles !== null) {
-          matchesComercial = getComercialVisibles.includes(contact.comercial_id);
-        }
-        
-        if (matchesUniversidadFilter && matchesCursoFilter && matchesComercial) {
-          stats[key].total++;
-          
-          // AGREGAR LOG PARA CANDELA
-          if (contact.nombre === 'Candela') {
-            console.log('✅ Candela contada en estadísticas!');
-          }
-          
-          // Contar por curso
-          if (contact.curso) {
-            stats[key].porCurso[contact.curso] = (stats[key].porCurso[contact.curso] || 0) + 1;
-          }
-          
-          // Contar por comercial
-          const comercialNombre = contact.comercial_nombre || 'Sin asignar';
-          stats[key].porComercial![comercialNombre] = (stats[key].porComercial![comercialNombre] || 0) + 1;
-        }
-      } else {
-        // AGREGAR LOG CUANDO NO SE ENCUENTRA LA CLAVE
-        if (contact.nombre === 'Candela') {
-          console.log('❌ Candela NO encontrada en stats. Clave:', key);
-        }
+      stats[colegio].total += 1;
+      if (contact.año_nacimiento) {
+        stats[colegio].porAnio[contact.año_nacimiento] = (stats[colegio].porAnio[contact.año_nacimiento] || 0) + 1;
       }
-    });
-
-    const result = Object.values(stats).sort((a, b) => {
-      if (a.universidad !== b.universidad) {
-        return a.universidad.localeCompare(b.universidad);
-      }
-      return b.total - a.total;
+      const comercialNombre = contact.comercial_nombre || contact.comercial || 'Sin asignar';
+      stats[colegio].porComercial[comercialNombre] = (stats[colegio].porComercial[comercialNombre] || 0) + 1;
     });
     
-    console.log('🎓 Estadísticas por titulación (incluyendo subordinados):', result);
-    return result;
-  }, [allUniversidades, allContacts, selectedUniversidad, selectedCurso, selectedComercial, getComercialVisibles]);
-
-  const totalContacts = filteredContacts.length;
-  const totalUniversidades = estadisticasGenerales?.totalUniversidades || allUniversidades.length;
-  const totalTitulaciones = estadisticasGenerales?.totalTitulaciones || allUniversidades.reduce((sum, uni) => sum + uni.titulaciones.length, 0);
-  const totalAlumnos = estadisticasGenerales?.totalAlumnos || allContacts.length;
+    return Object.values(stats).sort((a, b) => a.colegio.localeCompare(b.colegio, 'es', { sensitivity: 'base' }));
+  }, [filteredContacts, allUniversidades]);
   
-  // CORREGIDO: Crear uniqueUniversidades desde allUniversidades
-  const uniqueUniversidades = allUniversidades.map(uni => uni.nombre).sort();
 
+  // Años de nacimiento para el filtro (de todos los contactos)
+  const allBirthYears = useMemo(() => {
+    const years = Array.from(new Set(allContacts.map(c => c.año_nacimiento).filter(Boolean))) as number[];
+    return years.sort((a, b) => a - b);
+  }, [allContacts]);
+ 
+  const totalContacts = filteredContacts.length;
+  const totalUniversidades = uniqueUniversidades.length;
+  const totalTitulaciones = 0;
   console.log('📈 Totales calculados:', { totalContacts, totalUniversidades, totalTitulaciones });
 
   const handleUniversityClick = (universidad: string) => {
@@ -346,6 +287,32 @@ export default function CountPage({ onNavigateToContacts, currentUser }: CountPa
       search: '',
       comercial: selectedComercial
     });
+  };
+
+  // Funciones para manejar el autocompletado de colegios
+  const handleColegioInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setColegioInput(value);
+    setSelectedUniversidad(value); // Actualizar el filtro en tiempo real
+  };
+
+  const handleColegioSelect = (cole: string) => {
+    setColegioInput(cole);
+    setSelectedUniversidad(cole);
+    setShowColegioDropdown(false);
+  };
+
+  const handleColegioInputFocus = () => {
+    if (colegioInput.trim()) {
+      setShowColegioDropdown(true);
+    }
+  };
+
+  const handleColegioInputBlur = () => {
+    // Delay para permitir que se ejecute el click en el dropdown
+    setTimeout(() => {
+      setShowColegioDropdown(false);
+    }, 200);
   };
 
   const scrollToUniversitySection = (universidad: string) => {
@@ -391,35 +358,64 @@ export default function CountPage({ onNavigateToContacts, currentUser }: CountPa
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div>
+          <div className="relative">
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Universidad
+              Colegio
             </label>
-            <select
-              value={selectedUniversidad}
-              onChange={(e) => setSelectedUniversidad(e.target.value)}
+            <input
+              type="text"
+              value={colegioInput}
+              onChange={handleColegioInputChange}
+              onFocus={handleColegioInputFocus}
+              onBlur={handleColegioInputBlur}
+              placeholder={loadingUniversidades ? 'Cargando colegios...' : 'Escribir nombre del colegio...'}
               className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               disabled={loadingUniversidades}
-            >
-              <option value="">{loadingUniversidades ? 'Cargando universidades...' : 'Todas las universidades'}</option>
-              {!loadingUniversidades && uniqueUniversidades.map(uni => (
-                <option key={uni} value={uni}>{uni}</option>
-              ))}
-            </select>
+            />
+            
+            {/* Dropdown de autocompletado */}
+            {showColegioDropdown && filteredColegios.length > 0 && (
+              <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-auto">
+                {filteredColegios.map((cole, index) => (
+                  <div
+                    key={index}
+                    className="px-3 py-2 hover:bg-blue-50 cursor-pointer text-sm"
+                    onMouseDown={() => handleColegioSelect(cole)}
+                  >
+                    {cole}
+                  </div>
+                ))}
+              </div>
+            )}
+            
+            {/* Botón para limpiar filtro */}
+            {colegioInput && (
+              <button
+                type="button"
+                onClick={() => {
+                  setColegioInput('');
+                  setSelectedUniversidad('');
+                  setShowColegioDropdown(false);
+                }}
+                className="absolute right-2 top-7 text-gray-400 hover:text-gray-600"
+              >
+                ✕
+              </button>
+            )}
           </div>
           
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Curso
+              Año de nacimiento
             </label>
             <select
               value={selectedCurso}
               onChange={(e) => setSelectedCurso(e.target.value)}
               className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
-              <option value="">Todos los cursos</option>
-              {[1, 2, 3, 4, 5, 6].map(curso => (
-                <option key={curso} value={curso.toString()}>{curso}º</option>
+              <option value="">Todos los años</option>
+              {allBirthYears.map(year => (
+                <option key={year} value={year.toString()}>{year}</option>
               ))}
             </select>
           </div>
@@ -452,287 +448,97 @@ export default function CountPage({ onNavigateToContacts, currentUser }: CountPa
           <div className="flex items-center justify-between">
             <div>
               <h3 className="text-sm font-medium opacity-90">Total de Contactos</h3>
-              <p className="text-2xl font-bold">{totalContacts}</p>
+              <p className="text-2xl font-bold">{filteredContacts.length}</p>
             </div>
             <Users className="w-8 h-8 opacity-75" />
           </div>
           
           <div>
-            <h3 className="text-sm font-medium opacity-90">Universidades</h3>
-            <p className="text-2xl font-bold">{totalUniversidades}</p>
+            <h3 className="text-sm font-medium opacity-90">Colegios</h3>
+            <p className="text-2xl font-bold">{uniqueUniversidades.length}</p>
           </div>
           <div>
-            <h3 className="text-sm font-medium opacity-90">Titulaciones</h3>
-            <p className="text-2xl font-bold">{totalTitulaciones}</p>
+            <h3 className="text-sm font-medium opacity-90">Años de nacimiento</h3>
+            <p className="text-2xl font-bold">{allBirthYears.length}</p>
           </div>
           <div>
             <h3 className="text-sm font-medium opacity-90">Total Alumnos</h3>
-            <p className="text-2xl font-bold">{totalAlumnos}</p>
+            <p className="text-2xl font-bold">{filteredContacts.length}</p>
           </div>
         </div>
       </div>
 
-      {/* Contactos por Universidad */}
+      {/* Contactos por Colegio */}
       <div className="mb-8">
-        <h2 className="text-xl font-bold text-gray-900 mb-4">Contactos por Universidad</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {universityStats.map(stat => {
-            const percentage = totalContacts > 0 ? ((stat.total / totalContacts) * 100).toFixed(1) : '0';
-            return (
-              <div
-                key={stat.universidad}
-                onClick={() => handleUniversityCardClick(stat.universidad)}
-                className="bg-white p-6 rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow cursor-pointer group"
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className="font-semibold text-gray-900">{stat.universidad}</h3>
-                  <ArrowRight className="w-4 h-4 text-gray-400 group-hover:text-blue-600 transition-colors" />
-                </div>
-                <p className="text-2xl font-bold text-blue-600 mb-1">{stat.total}</p>
-                <p className="text-sm text-gray-500">{percentage}% del total</p>
-                <div className="mt-3 bg-gray-200 rounded-full h-2">
-                  <div
-                    className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                    style={{ width: `${percentage}%` }}
-                  />
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Contactos por Titulación */}
-      <div>
-        <h2 className="text-xl font-bold text-gray-900 mb-4">
-          Contactos por Titulación
-          {selectedUniversidad && (
-            <span className="text-blue-600 font-normal"> - {selectedUniversidad}</span>
-          )}
-        </h2>
-        {[...new Set(titulationStats.map(stat => stat.universidad))]
-          .sort()
-          .map(universidad => {
-            const universidadData = allUniversidades.find(u => u.nombre === universidad);
-            
-            // Filtrar por universidad seleccionada si existe
-            if (selectedUniversidad && universidad !== selectedUniversidad) {
-              return null;
-            }
-            
-            // CORRECCIÓN: Obtener titulaciones de titulationStats en lugar de universidadData
-            const titulacionesStats = titulationStats.filter(stat => stat.universidad === universidad);
-            const titulacionesNombres = titulacionesStats.map(stat => stat.titulacion);
-            
-            // Filtrar titulaciones de universidadData que también existen en titulationStats
-            const titulacionesUniversidad = universidadData?.titulaciones.filter(tit => 
-              titulacionesNombres.includes(tit.nombre)
-            ) || [];
-            
-            // Crear ID único para la universidad
-            const universidadId = universidad.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
-            
-            // Obtener el código de la universidad para buscar en schoolsMapping
-            const universidadCodigo = Object.keys(schoolsMapping).find(codigo => {
-              // Si el nombre de la universidad ya es una abreviación, usarla directamente
-              if (Object.keys(schoolsMapping).includes(universidad)) {
-                return codigo === universidad;
-              }
-              
-              // Si no, buscar por nombre completo (para compatibilidad)
-              const nombreCompleto = {
-                'UV': 'Universidad de Valencia',
-                'UPV': 'Universidad Politécnica de Valencia', 
-                'CEU': 'Universidad CEU Cardenal Herrera',
-                'UCV': 'Universidad Católica de Valencia',
-                'EDEM': 'EDEM Escuela de Empresarios',
-                'ESIC': 'ESIC Business & Marketing School',
-                'FLORIDA': 'Florida Universitaria',
-                'UEV': 'Universidad Europea des Valencia',
-                'EASD': 'Escuela de Arte y Superior de Diseño'
-              }[codigo];
-              return nombreCompleto === universidad;
-            }) || universidad; // Si no encuentra coincidencia, usar el nombre tal como viene
-            
-            // Agrupar titulaciones por rama/escuela
-            const titulacionesPorRama: Record<string, any[]> = {};
-            
-            titulacionesUniversidad.forEach(titulacion => {
-              const rama = getSchoolForTitulation(universidadCodigo || '', titulacion.nombre) || 'Sin clasificar';
-              if (!titulacionesPorRama[rama]) {
-                titulacionesPorRama[rama] = [];
-              }
-              titulacionesPorRama[rama].push(titulacion);
-            });
-            
-            // Obtener el orden de las ramas para esta universidad
-            const ordenRamas = universidadCodigo ? (schoolOrder[universidadCodigo as keyof typeof schoolOrder] || []) : [];
-            const ramasOrdenadas = ordenRamas.filter(rama => titulacionesPorRama[rama]);
-            
-            // Agregar ramas que no están en el orden definido
-            Object.keys(titulacionesPorRama).forEach(rama => {
-              if (!ramasOrdenadas.includes(rama)) {
-                ramasOrdenadas.push(rama);
-              }
-            });
-            
-            return (
-              <div key={universidad} id={`universidad-${universidadId}`} className="mb-8 scroll-mt-6">
-                {/* Header de Universidad */}
-                <div className="bg-gradient-to-r from-blue-700 to-blue-800 rounded-t-lg px-6 py-4">
-                  <h3 className="text-lg font-bold text-white">{universidad}</h3>
-                  <p className="text-blue-100 text-sm">
-                    {titulacionesUniversidad.length} titulaciones disponibles en {ramasOrdenadas.length} ramas
-                  </p>
-                </div>
-                
-                {/* Contenido agrupado por ramas */}
-                <div className="bg-white rounded-b-lg shadow-sm border border-gray-200 overflow-hidden">
-                  {ramasOrdenadas.map((rama, ramaIndex) => {
-                    const titulacionesRama = titulacionesPorRama[rama] || [];
-                    
-                    return (
-                      <div key={rama} className={ramaIndex > 0 ? 'border-t border-gray-300' : ''}>
-                        {/* Header de la rama */}
-                        <div className="bg-gradient-to-r from-blue-50 to-blue-100 px-6 py-3 border-b border-blue-200">
-                          <h4 className="font-semibold text-blue-800 text-sm uppercase tracking-wide">
-                            {rama}
-                          </h4>
-                          <p className="text-xs text-blue-600 mt-1">
-                            {titulacionesRama.length} titulaciones
-                          </p>
-                        </div>
-                        
-                        {/* Header de la tabla */}
-                        <div className="bg-gradient-to-r from-gray-50 to-gray-100 px-6 py-2 border-b border-gray-200">
-                          <div className="grid grid-cols-12 gap-4 text-gray-700 text-sm font-medium">
-                            <div className="col-span-3">TITULACIÓN</div>
-                            <div className="col-span-1 text-center">TOTAL</div>
-                            <div className="col-span-1 text-center">1º</div>
-                            <div className="col-span-1 text-center">2º</div>
-                            <div className="col-span-1 text-center">3º</div>
-                            <div className="col-span-1 text-center">4º</div>
-                            <div className="col-span-1 text-center">5º</div>
-                            <div className="col-span-1 text-center">6º</div>
-                            <div className="col-span-1">COMERCIALES</div>
-                            <div className="col-span-1 text-center">CONTACTOS</div>
-                          </div>
-                        </div>
-                        
-                        {/* Filas de titulaciones de esta rama */}
-                        <div className="divide-y divide-gray-100">
-                          {titulacionesRama.map((titulacion, index) => {
-                            // CORRECCIÓN: Buscar datos de esta titulación en titulationStats
-                            const titulacionStat = titulationStats.find(stat => 
-                              stat.universidad === universidad && stat.titulacion === titulacion.nombre
-                            );
-                            
-                            // Usar datos de titulacionStat si existen, o los datos originales si no
-                            const totalAlumnosTitulacion = titulacionStat?.total || titulacion.totalAlumnos || 0;
-                            const porCurso = titulacionStat?.porCurso || {};
-                            
-                            // Calcular alumnos por curso usando titulacionStat
-                            const alumnosPorCurso: Record<number, number> = {};
-                            if (titulacionStat) {
-                              // Usar datos de titulationStats
-                              Object.entries(porCurso).forEach(([curso, cantidad]) => {
-                                alumnosPorCurso[parseInt(curso)] = cantidad;
-                              });
-                            } else {
-                              // Fallback a los datos originales
-                              titulacion.cursos?.forEach(curso => {
-                                alumnosPorCurso[parseInt(curso.curso)] = curso.totalAlumnos || 0;
-                              });
-                            }
-                            
-                            // Calcular comerciales por titulación
-                            const comercialesPorTitulacion: Record<string, number> = titulacionStat?.porComercial || {};
-                            if (!titulacionStat && titulacion.cursos) {
-                              // Fallback a los datos originales
-                              titulacion.cursos.forEach(curso => {
-                                if (curso.alumnos && Array.isArray(curso.alumnos)) {
-                                  curso.alumnos.forEach(alumno => {
-                                    const nombreComercial = alumno.comercialNombre || 'Sin asignar';
-                                    comercialesPorTitulacion[nombreComercial] = (comercialesPorTitulacion[nombreComercial] || 0) + 1;
-                                  });
-                                }
-                              });
-                            }
-                            return (
-                              <div key={`${universidad}-${rama}-${titulacion.nombre}`} className="px-6 py-3 hover:bg-gray-50">
-                                <div className="grid grid-cols-12 gap-4 items-center">
-                                  {/* Nombre de la titulación */}
-                                  <div className="col-span-3">
-                                    <span className="font-medium text-gray-900 text-sm">{titulacion.nombre}</span>
-                                  </div>
-                                  
-                                  {/* Total */}
-                                  <div className="col-span-1 text-center">
-                                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
-                                      {totalAlumnosTitulacion}
-                                    </span>
-                                  </div>
-                                  
-                                  {/* Cursos 1º a 6º */}
-                                  {[1, 2, 3, 4, 5, 6].map(curso => (
-                                    <div key={curso} className="col-span-1 text-center">
-                                      {alumnosPorCurso[curso] ? (
-                                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                          {alumnosPorCurso[curso]}
-                                        </span>
-                                      ) : (
-                                        <span className="text-gray-300">0</span>
-                                      )}
-                                    </div>
-                                  ))}
-                                  
-                                  {/* Comerciales */}
-                                  <div className="col-span-1">
-                                    <div className="flex flex-wrap gap-1">
-                                      {Object.entries(comercialesPorTitulacion).length > 0 ? (
-                                        Object.entries(comercialesPorTitulacion)
-                                          .sort(([,a], [,b]) => b - a)
-                                          .map(([nombre, cantidad]) => (
-                                            <span key={nombre} className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
-                                              {nombre}: {cantidad}
-                                            </span>
-                                          ))
-                                      ) : (
-                                        <span className="text-gray-400 text-xs">Sin comerciales</span>
-                                      )}
-                                    </div>
-                                  </div>
-                                  
-                                  {/* Nueva columna de Contactos */}
-                                  <div className="col-span-1 text-center">
-                                    <button
-                                      onClick={() => handleTitulationClick(universidad, titulacion.nombre)}
-                                      className="inline-flex items-center px-3 py-1.5 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-                                    >
-                                      Ver contactos
-                                    </button>
-                                  </div>
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            );
-          })
-          .filter(Boolean)}
-
-        {titulationStats.length === 0 && (
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 text-center">
-            <BarChart3 className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-            <p className="text-gray-500">No hay datos para mostrar con los filtros seleccionados</p>
+        <h2 className="text-xl font-bold text-gray-900 mb-4">Contactos por Colegio</h2>
+        {colegiosStats.length === 0 && (
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 text-center text-gray-500">
+            No hay datos para mostrar
           </div>
         )}
+        <div className="space-y-6">
+          {colegiosStats.map(row => (
+            <div key={row.colegio} className="rounded-lg overflow-hidden border border-gray-200">
+              {/* Encabezado azul del colegio */}
+              <div className="bg-gradient-to-r from-blue-700 to-blue-800 px-6 py-4 flex items-center justify-between">
+                <div>
+                  <h3 className="text-white text-lg font-bold">{row.colegio}</h3>
+                  <p className="text-blue-100 text-sm">Total contactos: {row.total}</p>
+                </div>
+                <button
+                  onClick={() => onNavigateToContacts({ nombre_colegio: row.colegio })}
+                  className="inline-flex items-center px-3 py-1.5 text-xs font-medium text-white bg-blue-500 hover:bg-blue-600 rounded-md transition-colors"
+                >
+                  Ver contactos
+                </button>
+              </div>
+              {/* Contenido con columnas por año de nacimiento y comerciales */}
+              <div className="bg-white relative overflow-x-auto">
+                <div className="px-6 py-3 border-b border-gray-200 relative">
+                  <div className="grid gap-4" style={{ gridTemplateColumns: `1fr ${birthYears.map(() => 'minmax(60px, 1fr)').join(' ')} 1fr` }}>
+                    <div className="text-sm font-medium text-gray-700">Año de nacimiento</div>
+                    {birthYears.map(year => (
+                      <div key={year} className="text-sm font-medium text-gray-700 text-center">{year}</div>
+                    ))}
+                    <div className="text-sm font-medium text-gray-700 text-right sticky right-0 bg-white z-20 pl-0 pr-0 border-l border-gray-200">Comerciales</div>
+                  </div>
+                </div>
+                <div className="px-6 py-4 relative">
+                  <div className="grid gap-4 items-center" style={{ gridTemplateColumns: `1fr ${birthYears.map(() => 'minmax(60px, 1fr)').join(' ')} 1fr` }}>
+                    <div className="text-sm font-medium text-gray-900">{row.total} contactos</div>
+                    {birthYears.map(year => (
+                      <div key={year} className="text-center">
+                        {row.porAnio[year] ? (
+                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">{row.porAnio[year]}</span>
+                        ) : (
+                          <span className="text-gray-300">0</span>
+                        )}
+                      </div>
+                    ))}
+                    <div className="text-sm text-right sticky right-0 bg-white z-20 pl-0 pr-0 border-l border-gray-200">
+                      <div className="flex flex-col gap-1 items-end">
+                        {Object.entries(row.porComercial)
+                          .filter(([, cantidad]) => cantidad > 0)
+                          .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], 'es', { sensitivity: 'base' }))
+                          .map(([nombre, cantidad]) => (
+                            <span key={nombre} className="inline-flex w-fit items-center px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                              {nombre} ({cantidad})
+                            </span>
+                          ))}
+                      </div>
+                      {Object.entries(row.porComercial).filter(([, cantidad]) => cantidad > 0).length === 0 && (
+                        <span className="text-gray-400 text-sm">Sin asignar</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
+
+      {/* Sección por titulación eliminada */}
     </div>
   );
 }

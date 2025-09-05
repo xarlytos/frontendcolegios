@@ -81,8 +81,11 @@ export default function ContactosCompleta() {
       const filtered = contacts.filter(contact => 
         contact.nombre?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         contact.telefono?.includes(searchTerm) ||
+        contact.nombre_colegio?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         contact.universidad?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        contact.titulacion?.toLowerCase().includes(searchTerm.toLowerCase())
+        contact.titulacion?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        contact.comercial_nombre?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        contact.comercial?.toLowerCase().includes(searchTerm.toLowerCase())
       );
       console.log('  - Contactos filtrados:', filtered.length);
       console.log('  - Primeros 3 contactos filtrados:', filtered.slice(0, 3));
@@ -143,7 +146,7 @@ export default function ContactosCompleta() {
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Buscar por nombre, teléfono, universidad o titulación..."
+              placeholder="Buscar por nombre, teléfono, colegio, universidad, titulación o comercial..."
               className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
@@ -171,27 +174,43 @@ export default function ContactosCompleta() {
                     </div>
                     <div>
                       <h3 className="font-semibold text-gray-900">{contact.nombre}</h3>
-                      <p className="text-sm text-gray-500">{contact.universidad}</p>
+                      <p className="text-sm text-gray-500">
+                        {contact.nombre_colegio || contact.universidad || 'N/D'}
+                      </p>
                     </div>
                   </div>
                 </div>
-                <div className="space-y-2">
-                  {contact.titulacion && (
+                
+                <div className="space-y-3">
+                  {/* Colegio */}
+                  <div className="flex items-center text-sm text-gray-600">
+                    <GraduationCap className="w-4 h-4 mr-2 text-blue-500" />
+                    <span className="font-medium">Colegio:</span>
+                    <span className="ml-2">{contact.nombre_colegio || contact.universidad || 'N/D'}</span>
+                  </div>
+                  
+                  {/* Año de nacimiento */}
+                  {contact.año_nacimiento && (
                     <div className="flex items-center text-sm text-gray-600">
-                      <GraduationCap className="w-4 h-4 mr-2" />
-                      {contact.titulacion}
-                      {contact.curso && ` - ${contact.curso}º`}
+                      <div className="w-4 h-4 mr-2 bg-green-100 rounded-full flex items-center justify-center">
+                        <span className="text-xs font-bold text-green-600">{contact.año_nacimiento.toString().slice(-2)}</span>
+                      </div>
+                      <span className="font-medium">Año de nacimiento:</span>
+                      <span className="ml-2">{contact.año_nacimiento}</span>
+                    </div>
+                  )}
+                  
+                  {/* Comercial */}
+                  {(contact.comercial_nombre || contact.comercial) && (
+                    <div className="flex items-center text-sm text-gray-600">
+                      <div className="w-4 h-4 mr-2 bg-purple-100 rounded-full flex items-center justify-center">
+                        <span className="text-xs font-bold text-purple-600">C</span>
+                      </div>
+                      <span className="font-medium">Comercial:</span>
+                      <span className="ml-2">{contact.comercial_nombre || contact.comercial}</span>
                     </div>
                   )}
                 </div>
-                
-                {(contact.comercial_nombre || contact.comercial) && (
-  <div className="mt-4 pt-4 border-t border-gray-100">
-    <p className="text-xs text-gray-500">
-      Comercial: {contact.comercial_nombre || contact.comercial}
-    </p>
-  </div>
-)}
               </div>
             ))}
           </div>

@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { User } from '../types/auth';
-import { Shield, Key, Users, Trash2, Check, X, Settings, GraduationCap, ChevronDown, ChevronUp, Building2, BookOpen, Loader2, Plus, TrendingUp, Edit } from 'lucide-react';
+import { Shield, Key, Users, Trash2, Check, X, Settings, GraduationCap, ChevronDown, ChevronUp, Building2, BookOpen, Loader2, Plus, TrendingUp, Edit, Database } from 'lucide-react';
 import { usersService } from '../services/usersService';
 import { AVAILABLE_PERMISSIONS, Permission } from '../constants/permissions';
 import universidadesService, { Universidad, CreateUniversidadData, UpdateUniversidadData } from '../services/universidadesService';
 import titulacionesService, { CreateTitulacionData as CreateTitulacionFormData } from '../services/titulacionesService';
 import { contactsService } from '../services/contactsService';
+import configuracionService from '../services/configuracionService';
 
 interface AdminPanelProps {
   users: User[];
@@ -33,9 +34,8 @@ export default function AdminPanel({
   const [selectedPermissions, setSelectedPermissions] = useState<string[]>([]);
   const [userPermissionsMap, setUserPermissionsMap] = useState<Map<string, string[]>>(new Map());
   const [availablePermissions, setAvailablePermissions] = useState<Array<{ id: string; clave: string; descripcion: string }>>([]);
-  const [loadingPermissions, setLoadingPermissions] = useState(false);
   const [loadingAvailablePermissions, setLoadingAvailablePermissions] = useState(true);
-  const [expandedUniversities, setExpandedUniversities] = useState<Set<string>>(new Set());
+  const [loadingPermissions, setLoadingPermissions] = useState(false);
   const [universities, setUniversities] = useState<Universidad[]>([]);
   const [loadingUniversities, setLoadingUniversities] = useState(false);
   const [showCreateUniversityModal, setShowCreateUniversityModal] = useState(false);
@@ -50,10 +50,11 @@ export default function AdminPanel({
   const [creatingUniversity, setCreatingUniversity] = useState(false);
   const [increasingCourse, setIncreasingCourse] = useState(false);
   const [showEditUniversityModal, setShowEditUniversityModal] = useState(false);
-  const [editUniversityForm, setEditUniversityForm] = useState<{ id: string; nombre: string; codigo: string }>({
+  const [editUniversityForm, setEditUniversityForm] = useState<{ id: string; nombre: string; tipo: string; ciudad: string }>({
     id: '',
     nombre: '',
-    codigo: ''
+    tipo: 'publica',
+    ciudad: ''
   });
   const [editingUniversity, setEditingUniversity] = useState(false);
   const [deletingUniversity, setDeletingUniversity] = useState(false);
@@ -149,6 +150,7 @@ export default function AdminPanel({
         try {
           const data = await universidadesService.getUniversidades();
           console.log('🎓 Universidades cargadas:', data);
+          // Mostrar todos los colegios (activos e inactivos) en el admin
           setUniversities(data);
         } catch (error) {
           console.error('Error loading universities:', error);
@@ -163,17 +165,6 @@ export default function AdminPanel({
 
   const comercialUsers = users.filter(user => user.role === 'comercial');
   
-  const toggleUniversity = (universityId: string) => {
-    setExpandedUniversities(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(universityId)) {
-        newSet.delete(universityId);
-      } else {
-        newSet.add(universityId);
-      }
-      return newSet;
-    });
-  };
 
   // Función para mapear IDs del frontend a ObjectIds de la base de datos
   const mapFrontendIdsToObjectIds = (frontendIds: string[]): string[] => {
@@ -181,7 +172,8 @@ export default function AdminPanel({
     const ID_MAPPING: { [key: string]: string } = {
       '1': '68b4a079470cf2b2e15e758b', // VER_CONTACTOS
       '4': '68b4a079470cf2b2e15e7596', // ELIMINAR_CONTACTOS
-      '10': '68ba259dd1156f1c5ffc65ca' // VER_GRADUACIONES
+      '10': '68ba259dd1156f1c5ffc65ca', // VER_GRADUACIONES
+      '11': '68ba259dd1156f1c5ffc65cb' // VER_CONTACTOS_GRADUACIONES (se actualizará cuando se cree)
     };
     
     return frontendIds.map(id => ID_MAPPING[id]).filter(Boolean);
@@ -349,6 +341,9 @@ export default function AdminPanel({
 
     setCreatingUniversity(true);
     try {
+      console.log('📤 Datos a enviar para crear colegio:', createUniversityForm);
+      console.log('📤 Tipo de datos:', typeof createUniversityForm.tipo, createUniversityForm.tipo);
+      console.log('📤 Ciudad de datos:', typeof createUniversityForm.ciudad, createUniversityForm.ciudad);
       await universidadesService.createUniversidad(createUniversityForm);
       
       // Recargar la lista de universidades
@@ -379,9 +374,9 @@ export default function AdminPanel({
     setEditUniversityForm({
       id: (university as any)._id || university.id,
       nombre: university.nombre,
-      codigo: university.codigo
+      tipo: university.tipo || 'publica',
+      ciudad: university.ciudad || ''
     });
-    setEditingUniversityTitulaciones((university as any).titulaciones || []);
     setShowEditUniversityModal(true);
   };
 
@@ -563,24 +558,43 @@ export default function AdminPanel({
   const handleEditUniversity = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!editUniversityForm.nombre || !editUniversityForm.codigo) {
-      alert('El nombre y código son obligatorios');
+    if (!editUniversityForm.nombre || !editUniversityForm.tipo || !editUniversityForm.ciudad) {
+      alert('El nombre, régimen y localidad son obligatorios');
       return;
     }
 
     setEditingUniversity(true);
     try {
       const { id, ...updateData } = editUniversityForm;
-      await universidadesService.updateUniversidad(id, updateData);
+      // Generar código automáticamente desde el nombre
+      const codigo = updateData.nombre
+        .split(' ')
+        .map(word => word.charAt(0).toUpperCase())
+        .join('')
+        .substring(0, 6);
+      
+      const finalUpdateData = {
+        ...updateData,
+        codigo,
+        activa: true
+      };
+      
+      console.log('📤 Datos a enviar para actualizar colegio:', finalUpdateData);
+      console.log('📤 ID del colegio:', id);
+      console.log('📤 Tipo de datos:', typeof finalUpdateData.tipo, finalUpdateData.tipo);
+      console.log('📤 Ciudad de datos:', typeof finalUpdateData.ciudad, finalUpdateData.ciudad);
+      
+      await universidadesService.updateUniversidad(id, finalUpdateData);
       
       // Recargar la lista de universidades
       const data = await universidadesService.getUniversidades();
+      // Mostrar todos los colegios (activos e inactivos) en el admin
       setUniversities(data);
       
       // Cerrar el modal
       setShowEditUniversityModal(false);
       
-      alert('Universidad actualizada exitosamente');
+      alert('Colegio actualizado exitosamente');
     } catch (error: any) {
       console.error('Error updating university:', error);
       alert(error.message || 'Error al actualizar la universidad');
@@ -591,7 +605,7 @@ export default function AdminPanel({
 
   // Función para eliminar universidad
   const handleDeleteUniversity = async () => {
-    if (!confirm('¿Estás seguro de que quieres eliminar esta universidad? Esta acción no se puede deshacer.')) {
+    if (!confirm('¿Estás seguro de que quieres eliminar este colegio? Esta acción no se puede deshacer.')) {
       return;
     }
 
@@ -601,12 +615,13 @@ export default function AdminPanel({
       
       // Recargar la lista de universidades
       const data = await universidadesService.getUniversidades();
+      // Mostrar todos los colegios (activos e inactivos) en el admin
       setUniversities(data);
       
       // Cerrar el modal
       setShowEditUniversityModal(false);
       
-      alert('Universidad eliminada exitosamente');
+      alert('Colegio eliminado exitosamente');
     } catch (error: any) {
       console.error('Error deleting university:', error);
       alert(error.message || 'Error al eliminar la universidad');
@@ -686,11 +701,12 @@ export default function AdminPanel({
             }`}
           >
             <GraduationCap className="w-4 h-4 inline mr-2" />
-            Universidades
+            Colegios
           </button>
+          {/* Pestaña de contactos oculta - mantener código por si se necesita en el futuro */}
           <button
             onClick={() => setActiveTab('contacts')}
-            className={`py-2 px-1 border-b-2 font-medium text-sm ${
+            className={`py-2 px-1 border-b-2 font-medium text-sm hidden ${
               activeTab === 'contacts'
                 ? 'border-purple-500 text-purple-600'
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -710,6 +726,33 @@ export default function AdminPanel({
             <p className="text-sm text-blue-700">
               Administra todos los permisos de los usuarios comerciales del sistema. Cada permiso controla el acceso a diferentes funcionalidades.
             </p>
+            {/* Botón oculto - mantener código por si se necesita en el futuro */}
+            <div className="mt-4 hidden">
+              <button
+                onClick={async () => {
+                  try {
+                    console.log('🔧 Iniciando inicialización de permisos...');
+                    console.log('👤 Usuario actual:', currentUser);
+                    console.log('🔑 Token en localStorage:', localStorage.getItem('auth_token') ? 'Presente' : 'Ausente');
+                    
+                    const success = await configuracionService.inicializarPermisos();
+                    if (success) {
+                      alert('Permisos inicializados correctamente');
+                      window.location.reload(); // Recargar para ver los cambios
+                    } else {
+                      alert('Error al inicializar permisos');
+                    }
+                  } catch (error) {
+                    console.error('❌ Error:', error);
+                    alert('Error al inicializar permisos: ' + error.message);
+                  }
+                }}
+                className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              >
+                <Database className="w-4 h-4 mr-2" />
+                Inicializar Permisos Faltantes
+              </button>
+            </div>
           </div>
 
           <div className="bg-white border border-gray-200 rounded-lg">
@@ -720,7 +763,7 @@ export default function AdminPanel({
               {comercialUsers.map((user) => {
                 const userPermissions = userPermissionsMap.get(user.id) || [];
                 const filteredPermissions = userPermissions.filter(permiso => 
-                  permiso === 'VER_CONTACTOS' || permiso === 'ELIMINAR_CONTACTOS' || permiso === 'VER_GRADUACIONES'
+                  permiso === 'VER_CONTACTOS' || permiso === 'ELIMINAR_CONTACTOS' || permiso === 'VER_GRADUACIONES' || permiso === 'VER_CONTACTOS_GRADUACIONES'
                 );
                 const hasPermissions = filteredPermissions.length > 0;
                 
@@ -749,6 +792,7 @@ export default function AdminPanel({
                                   {permiso === 'EDITAR_CONTACTOS' && '✏️'}
                                   {permiso === 'VER_CONTACTOS' && '👁️'}
                                   {permiso === 'VER_GRADUACIONES' && <GraduationCap className="w-3 h-3 mr-1" />}
+                                  {permiso === 'VER_CONTACTOS_GRADUACIONES' && '👁️📊'}
                                   {permiso === 'IMPORTAR_CONTACTOS' && '📥'}
                                   {permiso === 'EXPORTAR_CONTACTOS' && '📤'}
                                   {permiso === 'GESTIONAR_USUARIOS' && '👥'}
@@ -841,10 +885,10 @@ export default function AdminPanel({
       {activeTab === 'universities' && (
         <div className="space-y-4">
           <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-4">
-            <h3 className="font-medium text-indigo-900 mb-2">Gestión de Universidades y Titulaciones</h3>
+            <h3 className="font-medium text-indigo-900 mb-2">Gestión de Colegios</h3>
             <p className="text-sm text-indigo-700">
-              Visualiza todas las universidades disponibles en el sistema y sus titulaciones asociadas. 
-              Total de universidades: {universities.length}
+              Visualiza todos los colegios disponibles en el sistema. 
+              Total de colegios: {universities.length}
             </p>
           </div>
 
@@ -852,7 +896,7 @@ export default function AdminPanel({
             <div className="bg-white border border-gray-200 rounded-lg p-8">
               <div className="flex flex-col items-center justify-center">
                 <Loader2 className="w-8 h-8 text-indigo-600 animate-spin mb-4" />
-                <p className="text-gray-600">Cargando universidades...</p>
+                <p className="text-gray-600">Cargando colegios...</p>
               </div>
             </div>
           ) : (
@@ -860,38 +904,33 @@ export default function AdminPanel({
               <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
                 <h4 className="font-medium text-gray-900 flex items-center">
                   <Building2 className="w-5 h-5 mr-2 text-indigo-600" />
-                  Listado de Universidades
+                  Listado de Colegios
                 </h4>
                 <button
                   onClick={() => setShowCreateUniversityModal(true)}
                   className="flex items-center px-3 py-1.5 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors text-sm font-medium"
                 >
                   <Plus className="w-4 h-4 mr-1" />
-                  Nueva Universidad
+                  Nuevo Colegio
                 </button>
               </div>
               
               {universities.length === 0 ? (
                 <div className="px-4 py-8 text-center text-gray-500">
                   <GraduationCap className="w-12 h-12 mx-auto mb-4 text-gray-300" />
-                  <p>No hay universidades registradas en el sistema.</p>
+                  <p>No hay colegios registrados en el sistema.</p>
                 </div>
               ) : (
                 <>
                   <div className="divide-y divide-gray-200">
                     {universities.map((university) => {
                       const universityId = (university as any)._id || university.id;
-                      const titulaciones = (university as any).titulaciones || [];
-                      const isExpanded = expandedUniversities.has(universityId);
                       
                       return (
                         <div key={universityId} className="overflow-hidden">
                           <div className="px-4 py-4 hover:bg-gray-50 transition-colors">
                             <div className="flex items-center justify-between">
-                              <div 
-                                className="flex items-center space-x-3 flex-1 cursor-pointer"
-                                onClick={() => toggleUniversity(universityId)}
-                              >
+                              <div className="flex items-center space-x-3 flex-1">
                                 <div className="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center">
                                   <GraduationCap className="w-5 h-5 text-indigo-600" />
                                 </div>
@@ -901,13 +940,14 @@ export default function AdminPanel({
                                   </p>
                                   <div className="flex items-center space-x-4 text-sm text-gray-500">
                                     <span>Código: {university.codigo}</span>
-                                    <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
-                                      (university as any).estado === 'activa' 
-                                        ? 'bg-green-100 text-green-800' 
-                                        : 'bg-gray-100 text-gray-800'
-                                    }`}>
-                                      {(university as any).estado || 'activa'}
-                                    </span>
+                                    {university.tipo && (
+                                      <span className="capitalize">
+                                        {university.tipo === 'publica' ? 'Público' : 'Privado'}
+                                      </span>
+                                    )}
+                                    {university.ciudad && (
+                                      <span>📍 {university.ciudad}</span>
+                                    )}
                                   </div>
                                 </div>
                               </div>
@@ -918,68 +958,14 @@ export default function AdminPanel({
                                     openEditUniversityModal(university);
                                   }}
                                   className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-md transition-colors"
-                                  title="Editar universidad"
+                                  title="Editar colegio"
                                 >
                                   <Edit className="w-4 h-4" />
                                 </button>
-                                <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
-                                  {titulaciones.length} titulaciones
-                                </span>
-                                <div 
-                                  className="cursor-pointer p-1"
-                                  onClick={() => toggleUniversity(universityId)}
-                                >
-                                  {isExpanded ? (
-                                    <ChevronUp className="w-5 h-5 text-gray-400" />
-                                  ) : (
-                                    <ChevronDown className="w-5 h-5 text-gray-400" />
-                                  )}
-                                </div>
                               </div>
                             </div>
                           </div>
                           
-                          {isExpanded && (
-                            <div className="bg-gray-50 px-4 py-4">
-                              {titulaciones.length === 0 ? (
-                                <div className="text-center py-4 text-gray-500">
-                                  <BookOpen className="w-8 h-8 mx-auto mb-2 text-gray-300" />
-                                  <p className="text-sm">No hay titulaciones registradas para esta universidad.</p>
-                                </div>
-                              ) : (
-                                <>
-                                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                                    {titulaciones.map((titulacion: any) => (
-                                      <div 
-                                        key={titulacion._id}
-                                        className="bg-white p-3 rounded-md border border-gray-200 hover:border-indigo-300 hover:shadow-sm transition-all"
-                                      >
-                                        <p className="text-sm font-medium text-gray-900 flex items-center">
-                                          <span className="w-2 h-2 bg-indigo-400 rounded-full mr-2"></span>
-                                          {titulacion.nombre}
-                                        </p>
-                                        <div className="mt-1 text-xs text-gray-500 space-y-1">
-                                          <p>Código: {titulacion.codigo}</p>
-                                          <p className="capitalize">Tipo: {titulacion.tipo}</p>
-                                          <p>{titulacion.duracion} años - {titulacion.creditos} créditos</p>
-                                          <p className="capitalize">Modalidad: {titulacion.modalidad}</p>
-                                        </div>
-                                      </div>
-                                    ))}
-                                  </div>
-                                  
-                                  <div className="mt-4 pt-4 border-t border-gray-200">
-                                    <div className="flex items-center justify-between text-sm">
-                                      <span className="text-gray-500">
-                                        Total de titulaciones en {university.nombre}: 
-                                        <span className="font-medium text-gray-900 ml-1">{titulaciones.length}</span>
-                                      </span>
-                                    </div>
-                                  </div>
-                                </>
-                              )}
-                            </div>
-                          )}
                         </div>
                       );
                     })}
@@ -987,19 +973,18 @@ export default function AdminPanel({
                   
                   <div className="px-4 py-3 bg-gray-50 border-t border-gray-200">
                     <div className="flex items-center justify-between text-sm">
-                      <span className="text-gray-600">
-                        Total de universidades en el sistema: 
-                        <span className="font-medium text-gray-900 ml-1">{universities.length}</span>
-                      </span>
-                      <span className="text-gray-600">
-                        Total de titulaciones: 
-                        <span className="font-medium text-gray-900 ml-1">
-                          {universities.reduce((total, uni) => {
-                            const titulaciones = (uni as any).titulaciones || [];
-                            return total + titulaciones.length;
-                          }, 0)}
+                      <div className="flex items-center space-x-4">
+                        <span className="text-gray-600">
+                          Total de colegios: 
+                          <span className="font-medium text-gray-900 ml-1">{universities.length}</span>
                         </span>
-                      </span>
+                        <span className="text-blue-600">
+                          Total: 
+                          <span className="font-medium ml-1">
+                            {universities.length}
+                          </span>
+                        </span>
+                      </div>
                     </div>
                   </div>
                 </>
@@ -1009,9 +994,9 @@ export default function AdminPanel({
         </div>
       )}
 
-      {/* Contacts Tab */}
+      {/* Contacts Tab - Oculto - mantener código por si se necesita en el futuro */}
       {activeTab === 'contacts' && (
-        <div className="space-y-4">
+        <div className="space-y-4 hidden">
           <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
             <h3 className="font-medium text-orange-900 mb-2">Gestión de Contactos</h3>
             <p className="text-sm text-orange-700">
@@ -1076,6 +1061,7 @@ export default function AdminPanel({
         </div>
       )}
 
+
       {/* Permissions Configuration Modal */}
       {permissionsModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -1106,7 +1092,7 @@ export default function AdminPanel({
                    </div>
                  ) : (
                    availablePermissions.filter(permission => 
-                     permission.clave === 'VER_CONTACTOS' || permission.clave === 'ELIMINAR_CONTACTOS' || permission.clave === 'VER_GRADUACIONES'
+                     permission.clave === 'VER_CONTACTOS' || permission.clave === 'ELIMINAR_CONTACTOS' || permission.clave === 'VER_GRADUACIONES' || permission.clave === 'VER_CONTACTOS_GRADUACIONES'
                    ).map((permission) => {
                    const isChecked = selectedPermissions.includes(permission.id);
                    console.log(`🔍 Checkbox ${permission.clave} (ID: ${permission.id}): checked=${isChecked}, selectedPermissions=${JSON.stringify(selectedPermissions)}`);
@@ -1137,7 +1123,7 @@ export default function AdminPanel({
             <div className="flex justify-between items-center pt-4 border-t border-gray-200">
               <div className="text-sm text-gray-500">
                  {selectedPermissions.length} de {availablePermissions.filter(permission => 
-                   permission.clave === 'VER_CONTACTOS' || permission.clave === 'ELIMINAR_CONTACTOS' || permission.clave === 'VER_GRADUACIONES'
+                   permission.clave === 'VER_CONTACTOS' || permission.clave === 'ELIMINAR_CONTACTOS' || permission.clave === 'VER_GRADUACIONES' || permission.clave === 'VER_CONTACTOS_GRADUACIONES'
                  ).length} permisos seleccionados
                </div>
               <div className="flex space-x-3">
@@ -1232,14 +1218,14 @@ export default function AdminPanel({
         </div>
       )}
 
-      {/* Create University Modal */}
+      {/* Create School (Colegio) Modal */}
       {showCreateUniversityModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 w-full max-w-lg">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-medium text-gray-900 flex items-center">
                 <GraduationCap className="w-5 h-5 mr-2 text-indigo-600" />
-                Nueva Universidad
+                Nuevo Colegio
               </h3>
               <button
                 onClick={() => {
@@ -1262,92 +1248,48 @@ export default function AdminPanel({
             <form onSubmit={handleCreateUniversity} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Nombre de la Universidad <span className="text-red-500">*</span>
+                  Nombre del Colegio <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
                   value={createUniversityForm.nombre}
-                  onChange={(e) => setCreateUniversityForm(prev => ({...prev, nombre: e.target.value}))}
+                  onChange={(e) => setCreateUniversityForm(prev => ({...prev, nombre: e.target.value, codigo: (e.target.value || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 10)}))}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  placeholder="Ej: Universidad Politécnica de Valencia"
+                  placeholder="Ej: Colegio San Martín"
                   required
                 />
               </div>
 
+              {/* Régimen (tipo) */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Código <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={createUniversityForm.codigo}
-                  onChange={(e) => setCreateUniversityForm(prev => ({...prev, codigo: e.target.value.toUpperCase()}))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  placeholder="Ej: UPV"
-                  required
-                  maxLength={10}
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Ciudad
-                  </label>
-                  <input
-                    type="text"
-                    value={createUniversityForm.ciudad}
-                    onChange={(e) => setCreateUniversityForm(prev => ({...prev, ciudad: e.target.value}))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    placeholder="Ej: Valencia"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    País
-                  </label>
-                  <input
-                    type="text"
-                    value={createUniversityForm.pais}
-                    onChange={(e) => setCreateUniversityForm(prev => ({...prev, pais: e.target.value}))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    placeholder="Ej: España"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Tipo de Universidad
+                  Régimen
                 </label>
                 <select
                   value={createUniversityForm.tipo}
                   onChange={(e) => setCreateUniversityForm(prev => ({...prev, tipo: e.target.value}))}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 >
-                  <option value="publica">Pública</option>
-                  <option value="privada">Privada</option>
-                  <option value="concertada">Concertada</option>
+                  <option value="publica">Público</option>
+                  <option value="privada">Privado</option>
                 </select>
               </div>
 
+              {/* Localidad */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Estado
+                  Localidad
                 </label>
-                <select
-                  value={createUniversityForm.activa ? 'activa' : 'inactiva'}
-                  onChange={(e) => setCreateUniversityForm(prev => ({
-                    ...prev, 
-                    activa: e.target.value === 'activa'
-                  }))}
+                <input
+                  type="text"
+                  value={createUniversityForm.ciudad}
+                  onChange={(e) => setCreateUniversityForm(prev => ({...prev, ciudad: e.target.value}))}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                >
-                  <option value="activa">Activa</option>
-                  <option value="inactiva">Inactiva</option>
-                </select>
+                  placeholder="Ej: Madrid"
+                />
               </div>
+
+              {/* Estado se mantiene pero oculto en UI para simplificar; por ahora lo dejamos como activo por defecto */}
 
               <div className="flex space-x-3 pt-4 border-t border-gray-200">
                 <button
@@ -1363,7 +1305,7 @@ export default function AdminPanel({
                   ) : (
                     <>
                       <Plus className="w-4 h-4 mr-2" />
-                      Crear Universidad
+                      Crear Colegio
                     </>
                   )}
                 </button>
@@ -1398,7 +1340,7 @@ export default function AdminPanel({
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-medium text-gray-900 flex items-center">
                 <Edit className="w-5 h-5 mr-2 text-indigo-600" />
-                Editar Universidad
+                Editar Colegio
               </h3>
               <button
                 onClick={() => setShowEditUniversityModal(false)}
@@ -1409,195 +1351,56 @@ export default function AdminPanel({
             </div>
 
             <form onSubmit={handleEditUniversity} className="space-y-6">
-              {/* Información básica de la universidad */}
+              {/* Información básica del colegio */}
               <div className="bg-gray-50 p-4 rounded-lg">
-                <h4 className="font-medium text-gray-900 mb-3">Información de la Universidad</h4>
+                <h4 className="font-medium text-gray-900 mb-3">Información del Colegio</h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Nombre de la Universidad <span className="text-red-500">*</span>
+                      Nombre del Colegio <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="text"
                       value={editUniversityForm.nombre}
                       onChange={(e) => setEditUniversityForm(prev => ({...prev, nombre: e.target.value}))}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                      placeholder="Ej: Universidad Politécnica de Valencia"
+                      placeholder="Ej: Colegio La Salle Paterna"
                       required
                     />
                   </div>
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Código <span className="text-red-500">*</span>
+                      Régimen <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      value={editUniversityForm.tipo}
+                      onChange={(e) => setEditUniversityForm(prev => ({...prev, tipo: e.target.value}))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      required
+                    >
+                      <option value="publica">Público</option>
+                      <option value="privada">Privado</option>
+                    </select>
+                  </div>
+
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Localidad <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="text"
-                      value={editUniversityForm.codigo}
-                      onChange={(e) => setEditUniversityForm(prev => ({...prev, codigo: e.target.value.toUpperCase()}))}
+                      value={editUniversityForm.ciudad}
+                      onChange={(e) => setEditUniversityForm(prev => ({...prev, ciudad: e.target.value}))}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                      placeholder="Ej: UPV"
+                      placeholder="Ej: Paterna, Valencia"
                       required
                     />
                   </div>
+
                 </div>
               </div>
 
-              {/* Gestión de Titulaciones */}
-              <div className="bg-blue-50 p-4 rounded-lg">
-                <div className="flex items-center justify-between mb-3">
-                  <h4 className="font-medium text-gray-900 flex items-center">
-                    <BookOpen className="w-5 h-5 mr-2 text-blue-600" />
-                    Titulaciones
-                  </h4>
-                  {!showInlineTitulacionForm && (
-                    <button
-                      type="button"
-                      onClick={() => setShowInlineTitulacionForm(true)}
-                      className="flex items-center px-3 py-1.5 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm font-medium"
-                    >
-                      <Plus className="w-4 h-4 mr-1" />
-                      Nueva Titulación
-                    </button>
-                  )}
-                </div>
-                
-                {/* Formulario inline para crear/editar titulación */}
-                {showInlineTitulacionForm && (
-                  <div className="bg-white p-4 rounded-md border border-blue-200 mb-4">
-                    <h5 className="font-medium text-gray-900 mb-3">
-                      {editingTitulacionIndex !== null ? 'Editar Titulación' : 'Nueva Titulación'}
-                    </h5>
-                    <div className="space-y-3">
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Nombre <span className="text-red-500">*</span>
-                          </label>
-                          <input
-                            type="text"
-                            value={editTitulacionForm.nombre}
-                            onChange={(e) => setEditTitulacionForm(prev => ({...prev, nombre: e.target.value}))}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                            placeholder="Ej: Ingeniería Informática"
-                            required
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Código <span className="text-red-500">*</span>
-                          </label>
-                          <input
-                            type="text"
-                            value={editTitulacionForm.codigo}
-                            onChange={(e) => setEditTitulacionForm(prev => ({...prev, codigo: e.target.value.toUpperCase()}))}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                            placeholder="Ej: II"
-                            required
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Duración (años) <span className="text-red-500">*</span>
-                          </label>
-                          <select
-                            value={editTitulacionForm.duracion}
-                            onChange={(e) => setEditTitulacionForm(prev => ({...prev, duracion: parseInt(e.target.value)}))}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                            required
-                          >
-                            <option value={3}>3 años</option>
-                            <option value={4}>4 años</option>
-                            <option value={5}>5 años</option>
-                            <option value={6}>6 años</option>
-                          </select>
-                        </div>
-                      </div>
-                      <div className="flex space-x-2 pt-2">
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            if (editingTitulacionIndex !== null) {
-                              handleUpdateTitulacion(e);
-                            } else {
-                              handleCreateTitulacion(e);
-                            }
-                          }}
-                          disabled={creatingTitulacion || editingTitulacion}
-                          className="flex items-center px-3 py-1.5 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50 text-sm font-medium"
-                        >
-                          {(creatingTitulacion || editingTitulacion) ? (
-                            <>
-                              <Loader2 className="w-3 h-3 mr-1 animate-spin" />
-                              {editingTitulacionIndex !== null ? 'Actualizando...' : 'Creando...'}
-                            </>
-                          ) : (
-                            <>
-                              <Check className="w-3 h-3 mr-1" />
-                              {editingTitulacionIndex !== null ? 'Actualizar' : 'Crear'}
-                            </>
-                          )}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            cancelTitulacionForm();
-                          }}
-                          disabled={creatingTitulacion || editingTitulacion}
-                          className="flex items-center px-3 py-1.5 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400 transition-colors disabled:opacity-50 text-sm font-medium"
-                        >
-                          <X className="w-3 h-3 mr-1" />
-                          Cancelar
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                )}
-                
-                {/* Lista de titulaciones */}
-                <div className="space-y-2 max-h-60 overflow-y-auto">
-                  {editingUniversityTitulaciones.length === 0 ? (
-                    <div className="text-center py-4 text-gray-500">
-                      <BookOpen className="w-8 h-8 mx-auto mb-2 text-gray-300" />
-                      <p className="text-sm">No hay titulaciones registradas para esta universidad.</p>
-                    </div>
-                  ) : (
-                    editingUniversityTitulaciones.map((titulacion, index) => (
-                      <div key={titulacion._id} className="bg-white p-3 rounded-md border border-gray-200 flex items-center justify-between">
-                        <div className="flex-1">
-                          <p className="font-medium text-gray-900">{titulacion.nombre}</p>
-                          <div className="text-sm text-gray-500 space-x-4">
-                            <span>Código: {titulacion.codigo}</span>
-                            <span>Duración: {titulacion.duracion} años</span>
-                          </div>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <button
-                            type="button"
-                            onClick={() => openEditTitulacionModal(titulacion, index)}
-                            className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
-                            title="Editar titulación"
-                          >
-                            <Edit className="w-4 h-4" />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleDeleteTitulacion(titulacion._id)}
-                            className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
-                            title="Eliminar titulación"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </div>
 
               <div className="flex space-x-3 pt-4 border-t border-gray-200">
                 <button
@@ -1613,7 +1416,7 @@ export default function AdminPanel({
                   ) : (
                     <>
                       <Check className="w-4 h-4 mr-2" />
-                      Actualizar Universidad
+                      Actualizar Colegio
                     </>
                   )}
                 </button>
@@ -1631,7 +1434,7 @@ export default function AdminPanel({
                   ) : (
                     <>
                       <Trash2 className="w-4 h-4 mr-2" />
-                      Borrar Universidad
+                      Borrar Colegio
                     </>
                   )}
                 </button>

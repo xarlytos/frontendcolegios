@@ -8,6 +8,7 @@ import { User } from '../types/auth';
 import ExcelImportModal from './ExcelImportModal';
 // import { useContacts } from '../hooks/useContacts'; // Removido - usar solo los props del padre
 import * as XLSX from 'xlsx';
+import universidadesService, { Universidad } from '../services/universidadesService';
 
 
 interface ContactsPageProps {
@@ -59,6 +60,7 @@ export default function ContactsPage({
   const [selectedContacts, setSelectedContacts] = useState<Set<string>>(new Set());
   const [showImportModal, setShowImportModal] = useState(false);
   const contactsPerPage = 10;
+  const [colegios, setColegios] = useState<Universidad[]>([]);
   
   // Hook de permisos
   // Estado para manejar permisos de eliminación
@@ -85,6 +87,22 @@ export default function ContactsPage({
     
     checkDeletePermission();
   }, [currentUser, hasPermission]);
+
+  // Cargar colegios desde backend para filtros
+  useEffect(() => {
+    const loadColegios = async () => {
+      try {
+        const data = await universidadesService.getUniversidades();
+        // Filtrar solo colegios activos
+        const activeColegios = (data || []).filter(uni => uni.activa !== false);
+        const sorted = activeColegios.slice().sort((a, b) => (a.nombre || '').localeCompare(b.nombre || '', 'es', { sensitivity: 'base' }));
+        setColegios(sorted);
+      } catch (error) {
+        console.error('Error cargando colegios para filtros:', error);
+      }
+    };
+    loadColegios();
+  }, []);
   
   // Usar directamente los contactos que vienen por props
   const contacts = propContacts;
@@ -348,8 +366,8 @@ export default function ContactsPage({
               className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
               <option value="">Todos</option>
-              {[...new Set(contacts.map(c => c.nombre_colegio).filter(Boolean))].map(colegio => (
-                <option key={colegio} value={colegio}>{colegio}</option>
+              {colegios.map(colegio => (
+                <option key={(colegio as any)._id || colegio.id} value={colegio.nombre}>{colegio.nombre}</option>
               ))}
             </select>
           </div>
@@ -425,7 +443,7 @@ export default function ContactsPage({
                     {contact.nombre}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {contact.nombre_colegio || 'N/D'}
+                    {contact.nombre_colegio || (contact as any).universidad || (contact as any).nombreColegio || 'N/D'}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     {contact.telefono || 'N/D'}

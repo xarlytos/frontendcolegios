@@ -4,7 +4,9 @@ export interface IUniversidad extends Document {
   _id: string;
   codigo: string;  // UV, UPV, CEU, etc.
   nombre: string;  // Nombre completo de la universidad
-  estado: 'activa' | 'inactiva';
+  tipo: 'publica' | 'privada';  // Régimen del colegio
+  ciudad: string;  // Localidad del colegio
+  activa: boolean;
   creadoPor: Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
@@ -25,10 +27,22 @@ const universidadSchema = new Schema<IUniversidad>({
     trim: true,
     maxlength: 200
   },
-  estado: {
+  tipo: {
     type: String,
-    enum: ['activa', 'inactiva'],
-    default: 'activa'
+    enum: ['publica', 'privada'],
+    required: true,
+    default: 'publica'
+  },
+  ciudad: {
+    type: String,
+    required: true,
+    trim: true,
+    maxlength: 100
+  },
+  activa: {
+    type: Boolean,
+    required: true,
+    default: true
   },
   creadoPor: {
     type: Schema.Types.ObjectId,
@@ -42,6 +56,8 @@ const universidadSchema = new Schema<IUniversidad>({
 // Índices
 universidadSchema.index({ codigo: 1 }, { unique: true });
 universidadSchema.index({ nombre: 1 }, { unique: true });
-universidadSchema.index({ estado: 1 });
+universidadSchema.index({ activa: 1 });
+universidadSchema.index({ tipo: 1 });
+universidadSchema.index({ ciudad: 1 });
 
 export const Universidad = model<IUniversidad>('Universidad', universidadSchema);

@@ -20,6 +20,7 @@ class ApiService {
 
   private loadToken() {
     this.token = localStorage.getItem('auth_token');
+    console.log('🔑 Token cargado:', this.token ? 'Token encontrado' : 'No hay token');
   }
 
   private saveToken(token: string) {
@@ -49,11 +50,15 @@ class ApiService {
 
     try {
       console.log('🔄 API Request:', { url, method: options.method || 'GET', headers });
+      console.log('🔑 Token actual:', this.token ? 'Presente' : 'Ausente');
       
       const response = await fetch(url, {
         ...options,
         headers,
       });
+
+      console.log('📡 Response status:', response.status, response.statusText);
+      console.log('📡 Response ok:', response.ok);
 
       const data = await response.json();
       

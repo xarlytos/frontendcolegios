@@ -9,6 +9,7 @@ import usuariosRoutes from './routes/usuariosRoutes';
 import universidadesRoutes from './routes/universidadesRoutes';
 import titulacionesRoutes from './routes/titulacionesRoutes';
 import graduacionesRoutes from './routes/graduacionesRoutes';
+import configuracionRoutes from './routes/configuracionRoutes';
 import { errorHandler } from './middleware/errorHandler';
 import { authenticateToken } from './middleware/auth';
 
@@ -58,15 +59,21 @@ app.use('/api/estadisticas', authenticateToken, estadisticasRoutes);
 app.use('/api/universidades', authenticateToken, universidadesRoutes);
 app.use('/api/titulaciones', authenticateToken, titulacionesRoutes);
 app.use('/api/graduaciones', authenticateToken, graduacionesRoutes);
+app.use('/api/configuracion', authenticateToken, configuracionRoutes);
 
-// COMENTAR O ELIMINAR esta línea problemática:
-// app.use('/api', authenticateToken);
 
 // Middleware de manejo de errores
 app.use(errorHandler);
 
 app.listen(PORT, () => {
   console.log(`🚀 Servidor corriendo en puerto ${PORT}`);
+  console.log(`🌐 Health check: http://localhost:${PORT}/health`);
+  console.log(`📋 API base: http://localhost:${PORT}/api`);
+}).on('error', (error: any) => {
+  console.error('❌ Error iniciando servidor:', error);
+  if (error.code === 'EADDRINUSE') {
+    console.error(`❌ Puerto ${PORT} ya está en uso`);
+  }
 });
 
 export default app;

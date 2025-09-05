@@ -7,6 +7,7 @@ import usuariosRoutes from './usuariosRoutes';
 import universidadesRoutes from './universidadesRoutes';
 import titulacionesRoutes from './titulacionesRoutes';
 import graduacionesRoutes from './graduacionesRoutes';
+import configuracionRoutes from './configuracionRoutes';
 
 const router = Router();
 
@@ -19,6 +20,7 @@ router.use('/usuarios', usuariosRoutes);
 router.use('/universidades', universidadesRoutes);
 router.use('/titulaciones', titulacionesRoutes);
 router.use('/graduaciones', graduacionesRoutes);
+router.use('/configuracion', configuracionRoutes);
 
 // Ruta de health check
 router.get('/health', (req, res) => {

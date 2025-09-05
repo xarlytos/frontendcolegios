@@ -53,3 +53,4 @@ async function checkDatabaseStructure() {
 // Ejecutar la verificación
 checkDatabaseStructure();
 
+

@@ -3,6 +3,7 @@ import { X } from 'lucide-react';
 import { Contact } from '../types';
 import { useContacts } from '../hooks/useContacts';
 import { useAuth } from '../hooks/useAuth';
+import universidadesService, { Universidad } from '../services/universidadesService';
 
 interface ContactFormProps {
   contact?: Contact | null;
@@ -23,6 +24,8 @@ export default function ContactForm({ contact, onSubmit, onCancel }: ContactForm
     comercial: ''
   });
 
+  const [colegios, setColegios] = useState<Universidad[]>([]);
+
   const [errors, setErrors] = useState<Record<string, string>>({});
 
 
@@ -40,6 +43,22 @@ export default function ContactForm({ contact, onSubmit, onCancel }: ContactForm
 
     loadComerciales();
   }, [getAllUsers]);
+
+  // Cargar colegios para el desplegable
+  useEffect(() => {
+    const loadColegios = async () => {
+      try {
+        const data = await universidadesService.getUniversidades();
+        // Filtrar solo colegios activos
+        const activeColegios = (data || []).filter(uni => uni.activa !== false);
+        const sorted = activeColegios.slice().sort((a, b) => (a.nombre || '').localeCompare(b.nombre || '', 'es', { sensitivity: 'base' }));
+        setColegios(sorted || []);
+      } catch (error) {
+        console.error('Error al cargar colegios:', error);
+      }
+    };
+    loadColegios();
+  }, []);
 
   useEffect(() => {
     if (contact) {
@@ -184,20 +203,25 @@ export default function ContactForm({ contact, onSubmit, onCancel }: ContactForm
             )}
           </div>
 
-          {/* 2. Nombre del colegio - Obligatorio */}
+          {/* 2. Colegio (desplegable) - Obligatorio */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Nombre del colegio *
+              Colegio *
             </label>
-            <input
-              type="text"
+            <select
               value={formData.nombre_colegio}
               onChange={(e) => handleChange('nombre_colegio', e.target.value)}
               className={`w-full border rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${
                 errors.nombre_colegio ? 'border-red-300' : 'border-gray-300'
               }`}
-              placeholder="Nombre del colegio"
-            />
+            >
+              <option value="">Selecciona un colegio</option>
+              {colegios.map((colegio) => (
+                <option key={(colegio as any)._id || colegio.id} value={colegio.nombre}>
+                  {colegio.nombre}
+                </option>
+              ))}
+            </select>
             {errors.nombre_colegio && (
               <p className="text-red-500 text-sm mt-1">{errors.nombre_colegio}</p>
             )}

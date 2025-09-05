@@ -66,7 +66,7 @@ export interface CreateUniversidadData {
   ciudad?: string;
   pais?: string;
   tipo?: string;
-  activa?: boolean;
+  activa?: boolean; // Siempre se establece como true en el backend
 }
 
 export interface UpdateUniversidadData {
@@ -75,7 +75,7 @@ export interface UpdateUniversidadData {
   ciudad?: string;
   pais?: string;
   tipo?: string;
-  estado?: 'activa' | 'inactiva'; // Cambiar de 'activa?: boolean' a 'estado'
+  activa?: boolean; // Siempre se establece como true en el backend
 }
 
 class UniversidadesService {
@@ -117,9 +117,9 @@ class UniversidadesService {
   }
 
   // Obtener universidades con estadísticas completas (titulaciones, cursos y alumnos)
-  async getUniversidadesConEstadisticas(estado: string = 'activa'): Promise<UniversidadesConEstadisticasResponse> {
+  async getUniversidadesConEstadisticas(activa: boolean = true): Promise<UniversidadesConEstadisticasResponse> {
     const response = await apiService.get<UniversidadesConEstadisticasResponse>(
-      `${this.baseUrl}/estadisticas?estado=${estado}`
+      `${this.baseUrl}/estadisticas?activa=${activa}`
     );
     return response;
   }
