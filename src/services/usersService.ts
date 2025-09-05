@@ -92,6 +92,10 @@ export class UsersService {
     return apiService.get<{ permisos: string[] }>(`/usuarios/${id}/permisos`);
   }
 
+  async getAvailablePermissions(): Promise<ApiResponse<{ permisos: Array<{ id: string; clave: string; descripcion: string }> }>> {
+    return apiService.get<{ permisos: Array<{ id: string; clave: string; descripcion: string }> }>('/usuarios/permisos-disponibles');
+  }
+
   async asignarJefe(subordinadoId: string, usuarioId: string): Promise<ApiResponse<{ message: string }>> {
     return apiService.post<{ message: string }>(`/usuarios/${subordinadoId}/asignar-jefe`, { usuarioId });
   }

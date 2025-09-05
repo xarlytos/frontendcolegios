@@ -869,6 +869,28 @@ export class UsuariosController {
     }
   }
 
+  // GET /usuarios/permisos-disponibles - Obtener todos los permisos disponibles
+  static async obtenerPermisosDisponibles(req: AuthRequest, res: Response) {
+    try {
+      const permisos = await Permiso.find({}).sort({ clave: 1 });
+      
+      res.json({
+        success: true,
+        permisos: permisos.map(p => ({
+          id: p._id,
+          clave: p.clave,
+          descripcion: p.descripcion
+        }))
+      });
+    } catch (error) {
+      console.error('Error al obtener permisos disponibles:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Error interno del servidor'
+      });
+    }
+  }
+
   // GET /usuarios/:id/permisos
   static async obtenerPermisosEfectivos(req: AuthRequest, res: Response) {
     try {
@@ -927,24 +949,13 @@ export class UsuariosController {
       
       console.log('✅ Usuario válido para modificación de permisos');
 
-      // Mapear IDs del frontend a claves de permisos
-      // Este mapeo debe mantenerse sincronizado con src/constants/permissions.ts
-      const PERMISSION_ID_MAP: { [key: string]: string } = {
-        '1': 'VER_CONTACTOS',
-        '4': 'ELIMINAR_CONTACTOS',
-        '7': 'GESTIONAR_USUARIOS'
-      };
-      
-      // Convertir IDs del frontend a claves de permisos
-      const claves = permisos.map((id: string) => PERMISSION_ID_MAP[id]).filter(Boolean);
-      console.log('🔄 Conversión de IDs a claves:', { permisos, claves });
-      
-      // Validar que todos los permisos existen usando las claves
-      console.log('🔍 Ejecutando consulta: Permiso.find({ clave: { $in:', claves, '} })');
+      // Los permisos vienen como IDs de la base de datos directamente
+      // Validar que todos los permisos existen usando los IDs
+      console.log('🔍 Ejecutando consulta: Permiso.find({ _id: { $in:', permisos, '} })');
       console.log('🔗 Conexión MongoDB estado:', mongoose.connection.readyState);
       
-      const permisosValidos = await Permiso.find({ clave: { $in: claves } });
-      console.log('🔍 Permisos válidos encontrados:', permisosValidos.length, 'de', claves.length);
+      const permisosValidos = await Permiso.find({ _id: { $in: permisos } });
+      console.log('🔍 Permisos válidos encontrados:', permisosValidos.length, 'de', permisos.length);
       console.log('📝 Permisos válidos:', permisosValidos.map(p => ({ id: p._id, clave: p.clave })));
       
       // Debug adicional: verificar todos los permisos en la base de datos
@@ -955,7 +966,7 @@ export class UsuariosController {
         todosPermisos.forEach(p => console.log(`  - ${p.clave}`));
       }
       
-      if (permisosValidos.length !== claves.length) {
+      if (permisosValidos.length !== permisos.length) {
         console.log('❌ Algunos permisos no son válidos');
         return res.status(400).json({
           success: false,

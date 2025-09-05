@@ -6,6 +6,7 @@ import usuariosRoutes from './usuariosRoutes';
 // import jerarquiasRoutes from './jerarquiasRoutes'; // ← ELIMINADO
 import universidadesRoutes from './universidadesRoutes';
 import titulacionesRoutes from './titulacionesRoutes';
+import graduacionesRoutes from './graduacionesRoutes';
 
 const router = Router();
 
@@ -17,6 +18,7 @@ router.use('/usuarios', usuariosRoutes);
 // router.use('/jerarquias', jerarquiasRoutes); // ← ELIMINADO
 router.use('/universidades', universidadesRoutes);
 router.use('/titulaciones', titulacionesRoutes);
+router.use('/graduaciones', graduacionesRoutes);
 
 // Ruta de health check
 router.get('/health', (req, res) => {

@@ -65,8 +65,8 @@ class EnvironmentConfig {
         nodeEnv: process.env.NODE_ENV || 'development'
       },
       database: {
-        uri: process.env.MONGODB_URI || 'mongodb://localhost:27017/university_management',
-        name: process.env.DB_NAME || 'university_management'
+        uri: process.env.MONGODB_URI || 'mongodb://localhost:27017/colegios_db',
+        name: process.env.DB_NAME || 'colegios_db'
       },
       jwt: {
         secret: process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-in-production',

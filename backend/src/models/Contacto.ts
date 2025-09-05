@@ -3,13 +3,11 @@ import { Schema, model, Document, Types } from 'mongoose';
 // Resolver conflicto en la interfaz
 export interface IContacto extends Document {
   _id: string;
-  universidadId: Types.ObjectId;
-  titulacionId: Types.ObjectId;
-  curso: number;
   nombreCompleto: string;
   telefono?: string;
   instagram?: string;
-  anioNacimiento?: number;
+  nombreColegio: string;
+  anioNacimiento: number;
   comercialId: Types.ObjectId;
   fechaAlta: Date;
   createdBy: Types.ObjectId;
@@ -20,22 +18,6 @@ export interface IContacto extends Document {
 
 // Resolver conflicto en el schema
 const contactoSchema = new Schema<IContacto>({
-  universidadId: {
-    type: Schema.Types.ObjectId,
-    ref: 'Universidad',
-    required: true
-  },
-  titulacionId: {
-    type: Schema.Types.ObjectId,
-    ref: 'Titulacion',
-    required: true
-  },
-  curso: {
-    type: Number,
-    required: true,
-    min: 1,
-    max: 6
-  },
   nombreCompleto: {
     type: String,
     required: true,
@@ -55,8 +37,15 @@ const contactoSchema = new Schema<IContacto>({
     // Permitir puntos y otros caracteres comunes en Instagram
     match: /^[a-zA-Z0-9_\-\.]+$/
   },
+  nombreColegio: {
+    type: String,
+    required: true,
+    trim: true,
+    maxlength: 200
+  },
   anioNacimiento: {
     type: Number,
+    required: true,
     min: 1950,
     max: new Date().getFullYear()
   },
@@ -92,7 +81,7 @@ contactoSchema.pre('save', function(next) {
 });
 
 // Índices
-contactoSchema.index({ universidadId: 1, titulacionId: 1, curso: 1 });
+contactoSchema.index({ nombreColegio: 1 });
 contactoSchema.index({ nombreCompleto: 'text' });
 contactoSchema.index({ telefono: 1 });
 contactoSchema.index({ instagram: 1 });

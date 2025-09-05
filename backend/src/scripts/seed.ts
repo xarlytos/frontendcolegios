@@ -58,6 +58,10 @@ const permisosBasicos = [
   {
     clave: 'GESTIONAR_UNIVERSIDADES',
     descripcion: 'Permite gestionar universidades y titulaciones'
+  },
+  {
+    clave: 'VER_GRADUACIONES',
+    descripcion: 'Permite ver la página de graduaciones'
   }
 ];
 

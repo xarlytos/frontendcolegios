@@ -16,7 +16,7 @@ router.get('/', ContactosController.getContactos);
 router.post('/', ContactosController.crearContacto);
 
 // Operaciones masivas - Solo para administradores (DEBE IR ANTES DE LAS RUTAS CON :id)
-router.put('/aumentar-curso', requireAnyPermission(['admin']), ContactosController.aumentarCursoTodos);
+// Nota: La función aumentarCursoTodos fue eliminada ya que no existe el campo curso en la nueva estructura
 
 // Obtener TODOS los contactos sin filtros - Para administradores o usuarios con permiso VER_CONTACTOS
 router.get('/todos', requireAnyPermission(['VER_CONTACTOS']), ContactosController.getTodosLosContactos);

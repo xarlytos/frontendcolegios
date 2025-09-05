@@ -52,5 +52,10 @@ export const AVAILABLE_PERMISSIONS: Permission[] = [
     id: '9',
     clave: 'GESTIONAR_UNIVERSIDADES',
     descripcion: 'Permite gestionar universidades y titulaciones'
+  },
+  {
+    id: '10',
+    clave: 'VER_GRADUACIONES',
+    descripcion: 'Permite ver la página de graduaciones'
   }
 ];

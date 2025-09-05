@@ -8,6 +8,7 @@ import CountPage from './components/CountPage';
 import UserManagement from './components/UserManagement';
 import AdminPanel from './components/AdminPanel';
 import ContactosCompleta from './components/ContactosCompleta';
+import GraduacionesPage from './components/GraduacionesPage';
 import { useContacts } from './hooks/useContacts';
 import { usePermissions } from './hooks/usePermissions';
 import { ContactFilters } from './types';
@@ -30,7 +31,7 @@ function App() {
     addUser
   } = useAuth();
   const { hasPermissionWithHierarchy } = usePermissions();
-  const [currentPage, setCurrentPage] = useState<'contactos' | 'conteo' | 'usuarios' | 'admin' | 'contactoscompleta'>('contactos');
+  const [currentPage, setCurrentPage] = useState<'contactos' | 'conteo' | 'usuarios' | 'admin' | 'contactoscompleta' | 'graduaciones'>('contactos');
   const [contactsFilters, setContactsFilters] = useState<Partial<ContactFilters>>({});
   const [isSidebarVisible, setIsSidebarVisible] = useState(() => {
     const saved = localStorage.getItem('sidebarVisible');
@@ -140,6 +141,10 @@ function App() {
             onNavigateToContacts={handleNavigateToContacts}
             currentUser={user}
           />
+        )}
+        
+        {currentPage === 'graduaciones' && (
+          <GraduacionesPage currentUser={user} />
         )}
         
         {currentPage === 'contactoscompleta' && (

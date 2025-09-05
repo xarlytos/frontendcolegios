@@ -1,7 +1,8 @@
 const mongoose = require('mongoose');
+require('dotenv').config();
 
-// URI correcta que usa el controlador
-const MONGODB_URI = 'mongodb://localhost:27017/university_management';
+// URI desde variables de entorno
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/colegios_db';
 
 async function seedDatabase() {
   try {

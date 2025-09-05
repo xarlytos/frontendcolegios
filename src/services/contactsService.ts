@@ -52,12 +52,8 @@ export class ContactsService {
           nombre: contact.nombreCompleto || contact.nombre || '',
           telefono: contact.telefono,
           instagram: contact.instagram,
-          universidad: contact.universidadId?.nombre || contact.universidad || '',
-          universidadId: contact.universidadId?._id,
-          titulacion: contact.titulacionId?.nombre || contact.titulacion || '',
-          titulacionId: contact.titulacionId?._id,
-          curso: contact.curso,
-          año_nacimiento: contact.año_nacimiento,
+          nombre_colegio: contact.nombreColegio || contact.nombre_colegio || '',
+          año_nacimiento: contact.año_nacimiento || contact.anioNacimiento,
           dia_libre: contact.diaLibre, // ← MAPEO CORREGIDO
           fecha_alta: contact.fechaAlta || contact.createdAt,
           comercial_id: contact.comercialId?._id,
@@ -97,26 +93,16 @@ export class ContactsService {
 
   async createContact(contact: Omit<Contact, 'id' | 'fecha_alta'>): Promise<ApiResponse<ContactResponse>> {
     console.log('🔧 contactsService.createContact called with:', contact);
-    console.log('🔧 Contact universidadId:', contact.universidadId);
-    console.log('🔧 Contact titulacionId:', contact.titulacionId);
     
     try {
-      // Usar los IDs directamente del formulario
-      if (!contact.universidadId || !contact.titulacionId) {
-        throw new Error('Universidad ID y Titulación ID son requeridos');
-      }
-      
       // Mapear los campos del frontend al backend
       const backendContact = {
         nombreCompleto: contact.nombre,
         telefono: contact.telefono,
         instagram: contact.instagram,
-        universidadId: contact.universidadId,
-        titulacionId: contact.titulacionId,
-        curso: contact.curso,
+        nombreColegio: contact.nombre_colegio,
         anioNacimiento: contact.año_nacimiento,
-        comercialId: contact.comercial,
-        diaLibre: contact.dia_libre // ← MAPEO AGREGADO
+        comercialId: contact.comercial
       };
       
       console.log('📤 Sending POST request with data:', backendContact);
@@ -138,12 +124,10 @@ export class ContactsService {
     if (contact.nombre) backendContact.nombreCompleto = contact.nombre;
     if (contact.telefono) backendContact.telefono = contact.telefono;
     if (contact.instagram) backendContact.instagram = contact.instagram;
-    if (contact.universidadId) backendContact.universidadId = contact.universidadId;
-    if (contact.titulacionId) backendContact.titulacionId = contact.titulacionId;
-    if (contact.curso) backendContact.curso = contact.curso;
+    if (contact.nombre_colegio) backendContact.nombreColegio = contact.nombre_colegio;
     if (contact.año_nacimiento) backendContact.anioNacimiento = contact.año_nacimiento;
     if (contact.comercial) backendContact.comercialId = contact.comercial;
-    if (contact.dia_libre !== undefined) backendContact.diaLibre = contact.dia_libre; // ← MAPEO AGREGADO
+    if (contact.dia_libre !== undefined) backendContact.diaLibre = contact.dia_libre;
     
     return apiService.put<ContactResponse>(`/contactos/${id}`, backendContact);
   }

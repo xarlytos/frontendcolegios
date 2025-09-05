@@ -3,8 +3,6 @@ import { Search, Plus, Edit, Trash2, Eye, X, Upload, FileText } from 'lucide-rea
 import { Contact, ContactFilters } from '../types';
 import ContactForm from './ContactForm';
 import ContactDetail from './ContactDetail';
-import universidadesService, { Universidad } from '../services/universidadesService';
-import titulacionesService from '../services/titulacionesService';
 import { contactsService } from '../services/contactsService';
 import { User } from '../types/auth';
 import ExcelImportModal from './ExcelImportModal';
@@ -39,9 +37,7 @@ export default function ContactsPage({
   // Ahora usamos solo los contacts que vienen por props desde App.tsx
   
   const [filters, setFilters] = useState<ContactFilters>({
-    universidad: initialFilters.universidad || '',
-    titulacion: initialFilters.titulacion || '',
-    curso: initialFilters.curso || '',
+    nombre_colegio: initialFilters.nombre_colegio || '',
     search: initialFilters.search || '',
     aportado_por: '',
     consentimiento: ''
@@ -55,11 +51,6 @@ export default function ContactsPage({
     console.log('📋 First 3 contacts after change:', propContacts.slice(0, 3).map(c => c.nombre));
   }, [propContacts]);
   
-  // Nuevos estados para datos de API
-  const [universities, setUniversities] = useState<Universidad[]>([]);
-  const [availableTitulaciones, setAvailableTitulaciones] = useState<string[]>([]);
-  const [loadingUniversities, setLoadingUniversities] = useState(true);
-  const [loadingTitulaciones, setLoadingTitulaciones] = useState(false);
   
   const [showForm, setShowForm] = useState(false);
   const [editingContact, setEditingContact] = useState<Contact | null>(null);
@@ -104,82 +95,6 @@ export default function ContactsPage({
   // Removido el efecto de carga automática de contactos comerciales
   // ya que ahora todos los contactos vienen filtrados desde App.tsx
 
-  // Cargar universidades al montar el componente
-  useEffect(() => {
-    const loadUniversities = async () => {
-      try {
-        console.log('🔄 Iniciando carga de universidades...');
-        setLoadingUniversities(true);
-        const universitiesData = await universidadesService.getUniversidades();
-        console.log('📥 Respuesta completa del servicio:', universitiesData);
-        console.log('📊 Total universidades recibidas:', universitiesData?.length || 0);
-        
-        // Filtrar universidades activas si tienen la propiedad estado
-        const activeUniversities = universitiesData.filter(uni => 
-          !('estado' in uni) || (uni as any).estado === 'activa'
-        );
-        console.log('✅ Universidades activas:', activeUniversities);
-        console.log('📋 Nombres de universidades activas:', activeUniversities.map(u => u.nombre));
-        
-        setUniversities(activeUniversities);
-        console.log('🏫 Estado de universidades actualizado');
-      } catch (error: any) {
-        console.error('❌ Error completo cargando universidades:', error);
-        console.error('📄 Detalles del error:', {
-          message: error?.message,
-          response: error?.response,
-          status: error?.response?.status,
-          data: error?.response?.data
-        });
-        // Fallback a datos estáticos si falla la API
-        setUniversities([]);
-      } finally {
-        setLoadingUniversities(false);
-        console.log('🏁 Carga de universidades finalizada');
-      }
-    };
-
-    loadUniversities();
-  }, []);
-
-  // Cargar titulaciones cuando cambia la universidad seleccionada
-  useEffect(() => {
-    const loadTitulaciones = async () => {
-      if (!filters.universidad) {
-        // Si no hay universidad seleccionada, mostrar todas las titulaciones de los contactos
-        const allTitulaciones = [...new Set(contacts.map(c => c.titulacion).filter(Boolean))];
-        setAvailableTitulaciones(allTitulaciones);
-        return;
-      }
-
-      try {
-        setLoadingTitulaciones(true);
-        // Buscar la universidad seleccionada para obtener su ID
-        const selectedUniversity = universities.find(uni => uni.nombre === filters.universidad);
-        if (selectedUniversity) {
-          const titulaciones = await titulacionesService.getTitulacionesPorUniversidad(selectedUniversity.id);
-          const titulacionNames = titulaciones.map(tit => tit.nombre);
-          setAvailableTitulaciones(titulacionNames);
-          console.log('🎓 Titulaciones cargadas para', filters.universidad, ':', titulacionNames);
-        } else {
-          console.warn('⚠️ Universidad no encontrada:', filters.universidad);
-          setAvailableTitulaciones([]);
-        }
-      } catch (error) {
-        console.error('❌ Error cargando titulaciones:', error);
-        // Fallback a titulaciones de contactos existentes
-        const contactTitulaciones = contacts
-          .filter(c => c.universidad === filters.universidad)
-          .map(c => c.titulacion)
-          .filter(Boolean);
-        setAvailableTitulaciones([...new Set(contactTitulaciones)]);
-      } finally {
-        setLoadingTitulaciones(false);
-      }
-    };
-
-    loadTitulaciones();
-  }, [filters.universidad, universities, contacts]);
 
   const filteredContacts = useMemo(() => {
     console.log('🔍 ContactsPage - Current filters:', filters);
@@ -190,11 +105,9 @@ export default function ContactsPage({
         contact.nombre.toLowerCase().includes(filters.search.toLowerCase()) ||
         (contact.telefono && contact.telefono.includes(filters.search));
       
-      const matchesUniversidad = filters.universidad === '' || contact.universidad === filters.universidad;
-      const matchesTitulacion = filters.titulacion === '' || contact.titulacion === filters.titulacion;
-      const matchesCurso = filters.curso === '' || contact.curso?.toString() === filters.curso;
+      const matchesColegio = filters.nombre_colegio === '' || contact.nombre_colegio === filters.nombre_colegio;
       
-      return matchesSearch && matchesUniversidad && matchesTitulacion && matchesCurso;
+      return matchesSearch && matchesColegio;
     });
     
     console.log('✅ ContactsPage - Contacts after filtering:', filtered.length);
@@ -215,20 +128,13 @@ export default function ContactsPage({
   const totalPages = Math.ceil(filteredContacts.length / contactsPerPage);
 
   const handleFilterChange = (key: keyof ContactFilters, value: string) => {
-    if (key === 'universidad') {
-      // Reset titulación cuando cambia la universidad
-      setFilters(prev => ({ ...prev, [key]: value, titulacion: '' }));
-    } else {
-      setFilters(prev => ({ ...prev, [key]: value }));
-    }
+    setFilters(prev => ({ ...prev, [key]: value }));
     setCurrentPage(1);
   };
 
   const clearFilters = () => {
     setFilters({
-      universidad: '',
-      titulacion: '',
-      curso: '',
+      nombre_colegio: '',
       search: '',
       aportado_por: '',
       consentimiento: ''
@@ -309,12 +215,9 @@ export default function ContactsPage({
       // Preparar los datos para el Excel - incluyendo el nuevo campo
       const excelData = selectedContactsData.map(contact => ({
         'Nombre': contact.nombre || '',
+        'Colegio': contact.nombre_colegio || '',
         'Teléfono': contact.telefono || '',
         'Instagram': contact.instagram || '',
-        'Universidad': contact.universidad || '',
-        'Titulación': contact.titulacion || '',
-        'Curso': contact.curso || '',
-        'Día Libre': contact.dia_libre || '',
         'Año de Nacimiento': contact.año_nacimiento || '',
         'Comercial': contact.comercial_nombre || ''
       }));
@@ -324,15 +227,12 @@ export default function ContactsPage({
       const workbook = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(workbook, worksheet, 'Contactos');
   
-      // Ajustar el ancho de las columnas para los 9 campos
+      // Ajustar el ancho de las columnas para los 6 campos
       const columnWidths = [
         { wch: 20 }, // Nombre
+        { wch: 25 }, // Colegio
         { wch: 15 }, // Teléfono
         { wch: 15 }, // Instagram
-        { wch: 25 }, // Universidad
-        { wch: 30 }, // Titulación
-        { wch: 8 },  // Curso
-        { wch: 12 }, // Día Libre
         { wch: 15 }, // Año de Nacimiento
         { wch: 20 }  // Comercial
       ];
@@ -437,53 +337,19 @@ export default function ContactsPage({
           </button>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Universidad
+              Colegio
             </label>
             <select
-              value={filters.universidad}
-              onChange={(e) => handleFilterChange('universidad', e.target.value)}
-              disabled={loadingUniversities}
-              className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            >
-              <option value="">Todas</option>
-              {universities.map(uni => (
-                <option key={uni._id} value={uni.nombre}>{uni.nombre}</option>
-              ))}
-            </select>
-          </div>
-          
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Titulación
-            </label>
-            <select
-              value={filters.titulacion}
-              onChange={(e) => handleFilterChange('titulacion', e.target.value)}
-              disabled={loadingTitulaciones}
-              className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            >
-              <option value="">Todas</option>
-              {availableTitulaciones.map(tit => (
-                <option key={tit} value={tit}>{tit}</option>
-              ))}
-            </select>
-          </div>
-          
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Curso
-            </label>
-            <select
-              value={filters.curso}
-              onChange={(e) => handleFilterChange('curso', e.target.value)}
+              value={filters.nombre_colegio}
+              onChange={(e) => handleFilterChange('nombre_colegio', e.target.value)}
               className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
               <option value="">Todos</option>
-              {[1, 2, 3, 4, 5, 6].map(curso => (
-                <option key={curso} value={curso.toString()}>{curso}º</option>
+              {[...new Set(contacts.map(c => c.nombre_colegio).filter(Boolean))].map(colegio => (
+                <option key={colegio} value={colegio}>{colegio}</option>
               ))}
             </select>
           </div>
@@ -519,22 +385,13 @@ export default function ContactsPage({
                   Nombre
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Colegio
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Teléfono
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Instagram
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Universidad
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Titulación
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Curso
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Día Libre
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Año Nacimiento
@@ -568,6 +425,9 @@ export default function ContactsPage({
                     {contact.nombre}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {contact.nombre_colegio || 'N/D'}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     {contact.telefono || 'N/D'}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
@@ -581,18 +441,6 @@ export default function ContactsPage({
                         @{contact.instagram.replace('@', '')}
                       </a>
                     ) : 'N/D'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {contact.universidad}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {contact.titulacion}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {contact.curso ? `${contact.curso}º` : 'N/D'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {contact.dia_libre || 'N/D'}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     {contact.año_nacimiento || 'N/D'}

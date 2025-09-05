@@ -37,7 +37,7 @@ export default function ContactDetail({ contact, onClose, onEdit }: ContactDetai
             <User className="w-8 h-8 text-blue-600" />
             <div>
               <h3 className="text-2xl font-bold text-gray-900">{contact.nombre}</h3>
-              <p className="text-gray-600">{contact.titulacion} - {contact.universidad}</p>
+              <p className="text-gray-600">{contact.nombre_colegio}</p>
             </div>
           </div>
 
@@ -73,22 +73,13 @@ export default function ContactDetail({ contact, onClose, onEdit }: ContactDetai
               <div>
                 <div className="flex items-center space-x-2 mb-2">
                   <GraduationCap className="w-4 h-4 text-gray-500" />
-                  <span className="font-medium text-gray-700">Universidad</span>
+                  <span className="font-medium text-gray-700">Colegio</span>
                 </div>
-                <p className="text-gray-900">{contact.universidad}</p>
-              </div>
-
-              <div>
-                <span className="font-medium text-gray-700">Titulación</span>
-                <p className="text-gray-900">{contact.titulacion}</p>
+                <p className="text-gray-900">{contact.nombre_colegio}</p>
               </div>
             </div>
 
             <div className="space-y-4">
-              <div>
-                <span className="font-medium text-gray-700">Curso</span>
-                <p className="text-gray-900">{contact.curso ? `${contact.curso}º` : 'N/D'}</p>
-              </div>
 
               <div>
                 <div className="flex items-center space-x-2 mb-2">

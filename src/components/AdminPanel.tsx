@@ -32,6 +32,9 @@ export default function AdminPanel({
   const [permissionsModal, setPermissionsModal] = useState<{userId: string; userName: string; userPermissions: string[]; selectedPermissionIds: string[]} | null>(null);
   const [selectedPermissions, setSelectedPermissions] = useState<string[]>([]);
   const [userPermissionsMap, setUserPermissionsMap] = useState<Map<string, string[]>>(new Map());
+  const [availablePermissions, setAvailablePermissions] = useState<Array<{ id: string; clave: string; descripcion: string }>>([]);
+  const [loadingPermissions, setLoadingPermissions] = useState(false);
+  const [loadingAvailablePermissions, setLoadingAvailablePermissions] = useState(true);
   const [expandedUniversities, setExpandedUniversities] = useState<Set<string>>(new Set());
   const [universities, setUniversities] = useState<Universidad[]>([]);
   const [loadingUniversities, setLoadingUniversities] = useState(false);
@@ -79,6 +82,43 @@ export default function AdminPanel({
     }
   }, [permissionsModal]);
   
+  // Cargar permisos disponibles al montar el componente
+  useEffect(() => {
+    const loadAvailablePermissions = async () => {
+      try {
+        console.log('🔄 Loading available permissions...');
+        setLoadingAvailablePermissions(true);
+        const response = await usersService.getAvailablePermissions();
+        console.log('📥 Available permissions response:', response);
+        console.log('📥 Response type:', typeof response);
+        console.log('📥 Response keys:', Object.keys(response));
+        
+        if (response.success && response.permisos) {
+          console.log('✅ Setting available permissions:', response.permisos);
+          console.log('✅ Permissions count:', response.permisos.length);
+          setAvailablePermissions(response.permisos);
+        } else {
+          console.log('❌ No permissions in response or not successful');
+          console.log('❌ Response success:', response.success);
+          console.log('❌ Response permisos:', response.permisos);
+          // Usar fallback temporalmente para que funcione
+          console.log('🔄 Using fallback permissions from constants');
+          setAvailablePermissions(AVAILABLE_PERMISSIONS);
+        }
+      } catch (error) {
+        console.error('❌ Error loading available permissions:', error);
+        console.error('❌ Error details:', error.message);
+        // Fallback a permisos estáticos si hay error
+        console.log('🔄 Using fallback permissions from constants due to error');
+        setAvailablePermissions(AVAILABLE_PERMISSIONS);
+      } finally {
+        setLoadingAvailablePermissions(false);
+      }
+    };
+    
+    loadAvailablePermissions();
+  }, []);
+
   // Cargar permisos de todos los usuarios comerciales al montar el componente
   useEffect(() => {
     const loadAllUserPermissions = async () => {
@@ -120,8 +160,6 @@ export default function AdminPanel({
     
     loadUniversities();
   }, [activeTab, universities.length]);
-  
-  const [loadingPermissions, setLoadingPermissions] = useState(false);
 
   const comercialUsers = users.filter(user => user.role === 'comercial');
   
@@ -137,9 +175,41 @@ export default function AdminPanel({
     });
   };
 
+  // Función para mapear IDs del frontend a ObjectIds de la base de datos
+  const mapFrontendIdsToObjectIds = (frontendIds: string[]): string[] => {
+    // Mapeo de IDs del frontend a ObjectIds reales de la base de datos
+    const ID_MAPPING: { [key: string]: string } = {
+      '1': '68b4a079470cf2b2e15e758b', // VER_CONTACTOS
+      '4': '68b4a079470cf2b2e15e7596', // ELIMINAR_CONTACTOS
+      '10': '68ba259dd1156f1c5ffc65ca' // VER_GRADUACIONES
+    };
+    
+    return frontendIds.map(id => ID_MAPPING[id]).filter(Boolean);
+  };
+
   // Función para abrir el modal de configuración de permisos
   const openPermissionsModal = async (userId: string, userName: string) => {
     console.log('🚀🚀🚀 openPermissionsModal INICIADO para:', { userId, userName });
+    console.log('🚀 availablePermissions length:', availablePermissions.length);
+    
+    // Si no hay permisos disponibles, cargar desde el backend
+    if (availablePermissions.length === 0 && !loadingAvailablePermissions) {
+      console.log('⚠️ No hay permisos disponibles, cargando desde backend...');
+      try {
+        const response = await usersService.getAvailablePermissions();
+        if (response.success && response.permisos) {
+          console.log('✅ Permisos cargados desde backend:', response.permisos.length);
+          setAvailablePermissions(response.permisos);
+        } else {
+          console.log('❌ Error cargando permisos desde backend');
+          throw new Error('Failed to load permissions from backend');
+        }
+      } catch (error) {
+        console.error('❌ Error reloading permissions:', error);
+        throw new Error('Cannot load permissions - backend endpoint failed');
+      }
+    }
+    
     setLoadingPermissions(true);
     try {
       console.log('🚀 Fetching permissions for user:', userId);
@@ -155,7 +225,7 @@ export default function AdminPanel({
         console.log('🚀 Tipo de userPermissions:', typeof userPermissions);
         console.log('🚀 Es array?:', Array.isArray(userPermissions));
         console.log('🚀 Longitud del array:', userPermissions.length);
-        console.log('🚀 AVAILABLE_PERMISSIONS completo:', AVAILABLE_PERMISSIONS);
+        console.log('🚀 availablePermissions completo:', availablePermissions);
         
         // Convertir las claves de permisos a IDs
         console.log('🚀 Iniciando conversión de claves a IDs...');
@@ -165,7 +235,7 @@ export default function AdminPanel({
           for (let i = 0; i < userPermissions.length; i++) {
             const userPermission = userPermissions[i];
             console.log(`🚀 [${i}] Buscando clave: "${userPermission}" (tipo: ${typeof userPermission})`);
-            const found = AVAILABLE_PERMISSIONS.find(p => {
+            const found = availablePermissions.find(p => {
               console.log(`   Comparando con: "${p.clave}" - ¿Coincide? ${p.clave === userPermission}`);
               return p.clave === userPermission;
             });
@@ -209,11 +279,15 @@ export default function AdminPanel({
 
     setLoadingPermissions(true);
     try {
-      const response = await usersService.updateUserPermissions(permissionsModal.userId, selectedPermissions);
+      // Mapear los IDs del frontend a ObjectIds de la base de datos
+      const objectIds = mapFrontendIdsToObjectIds(selectedPermissions);
+      console.log('🔄 Mapeando IDs del frontend a ObjectIds:', { selectedPermissions, objectIds });
+      
+      const response = await usersService.updateUserPermissions(permissionsModal.userId, objectIds);
       if (response.success) {
         // Actualizar el mapa de permisos con los nuevos permisos
         const permissionClaves = selectedPermissions.map(id => {
-          const permission = AVAILABLE_PERMISSIONS.find(p => p.id === id);
+          const permission = availablePermissions.find(p => p.id === id);
           return permission ? permission.clave : '';
         }).filter(clave => clave !== '');
         
@@ -646,7 +720,7 @@ export default function AdminPanel({
               {comercialUsers.map((user) => {
                 const userPermissions = userPermissionsMap.get(user.id) || [];
                 const filteredPermissions = userPermissions.filter(permiso => 
-                  permiso === 'VER_CONTACTOS' || permiso === 'ELIMINAR_CONTACTOS'
+                  permiso === 'VER_CONTACTOS' || permiso === 'ELIMINAR_CONTACTOS' || permiso === 'VER_GRADUACIONES'
                 );
                 const hasPermissions = filteredPermissions.length > 0;
                 
@@ -668,12 +742,13 @@ export default function AdminPanel({
                                 <span 
                                   key={permiso}
                                   className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800"
-                                  title={AVAILABLE_PERMISSIONS.find(p => p.clave === permiso)?.descripcion}
+                                  title={availablePermissions.find(p => p.clave === permiso)?.descripcion}
                                 >
                                   {permiso === 'ELIMINAR_CONTACTOS' && <Trash2 className="w-3 h-3 mr-1" />}
                                   {permiso === 'CREAR_CONTACTOS' && '➕'}
                                   {permiso === 'EDITAR_CONTACTOS' && '✏️'}
                                   {permiso === 'VER_CONTACTOS' && '👁️'}
+                                  {permiso === 'VER_GRADUACIONES' && <GraduationCap className="w-3 h-3 mr-1" />}
                                   {permiso === 'IMPORTAR_CONTACTOS' && '📥'}
                                   {permiso === 'EXPORTAR_CONTACTOS' && '📤'}
                                   {permiso === 'GESTIONAR_USUARIOS' && '👥'}
@@ -1019,9 +1094,20 @@ export default function AdminPanel({
               <div className="space-y-3 max-h-96 overflow-y-auto">
                  {console.log('🎯 RENDERIZANDO MODAL - selectedPermissions actual:', selectedPermissions)}
                  {console.log('🎯 RENDERIZANDO MODAL - permissionsModal:', permissionsModal)}
-                 {AVAILABLE_PERMISSIONS.filter(permission => 
-                   permission.clave === 'VER_CONTACTOS' || permission.clave === 'ELIMINAR_CONTACTOS'
-                 ).map((permission) => {
+                 {console.log('🎯 RENDERIZANDO MODAL - availablePermissions:', availablePermissions)}
+                 {loadingAvailablePermissions ? (
+                   <div className="flex items-center justify-center py-8">
+                     <Loader2 className="w-6 h-6 animate-spin mr-2" />
+                     <span className="text-gray-500">Cargando permisos...</span>
+                   </div>
+                 ) : availablePermissions.length === 0 ? (
+                   <div className="text-center py-8 text-gray-500">
+                     No hay permisos disponibles
+                   </div>
+                 ) : (
+                   availablePermissions.filter(permission => 
+                     permission.clave === 'VER_CONTACTOS' || permission.clave === 'ELIMINAR_CONTACTOS' || permission.clave === 'VER_GRADUACIONES'
+                   ).map((permission) => {
                    const isChecked = selectedPermissions.includes(permission.id);
                    console.log(`🔍 Checkbox ${permission.clave} (ID: ${permission.id}): checked=${isChecked}, selectedPermissions=${JSON.stringify(selectedPermissions)}`);
                    return (
@@ -1043,14 +1129,15 @@ export default function AdminPanel({
                     </div>
                   </div>
                    );
-                 })}
+                 })
+                 )}
               </div>
             </div>
             
             <div className="flex justify-between items-center pt-4 border-t border-gray-200">
               <div className="text-sm text-gray-500">
-                 {selectedPermissions.length} de {AVAILABLE_PERMISSIONS.filter(permission => 
-                   permission.clave === 'VER_CONTACTOS' || permission.clave === 'ELIMINAR_CONTACTOS'
+                 {selectedPermissions.length} de {availablePermissions.filter(permission => 
+                   permission.clave === 'VER_CONTACTOS' || permission.clave === 'ELIMINAR_CONTACTOS' || permission.clave === 'VER_GRADUACIONES'
                  ).length} permisos seleccionados
                </div>
               <div className="flex space-x-3">

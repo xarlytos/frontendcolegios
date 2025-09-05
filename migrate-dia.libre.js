@@ -1,7 +1,8 @@
 const mongoose = require('mongoose');
+require('dotenv').config();
 
-// URI de tu base de datos
-const MONGODB_URI = 'mongodb://localhost:27017/university_management';
+// URI desde variables de entorno
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/colegios_db';
 
 async function migrateDiaLibre() {
   try {

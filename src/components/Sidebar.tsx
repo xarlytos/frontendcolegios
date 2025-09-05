@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { Users, BarChart3, Settings, LogOut, Shield, User, UserCog, Eye, EyeOff } from 'lucide-react';
+import { Users, BarChart3, Settings, LogOut, Shield, User, UserCog, Eye, EyeOff, GraduationCap } from 'lucide-react';
 import { User as UserType } from '../types/auth';
 import { authService } from '../services/authService';
 
 interface SidebarProps {
-  currentPage: 'contactos' | 'conteo' | 'usuarios' | 'admin' | 'contactoscompleta';
-  onPageChange: (page: 'contactos' | 'conteo' | 'usuarios' | 'admin' | 'contactoscompleta') => void;
+  currentPage: 'contactos' | 'conteo' | 'usuarios' | 'admin' | 'contactoscompleta' | 'graduaciones';
+  onPageChange: (page: 'contactos' | 'conteo' | 'usuarios' | 'admin' | 'contactoscompleta' | 'graduaciones') => void;
   user: UserType | null;
   onLogout: () => void;
   onToggleSidebar?: () => void;  // Nueva prop
@@ -60,8 +60,7 @@ export default function Sidebar({ currentPage, onPageChange, user, onLogout, onT
       {/* Header con botón toggle */}
       <div className="p-6 border-b border-gray-200 flex justify-between items-start">
         <div>
-          <h1 className="text-xl font-bold text-gray-900">Base de Contactos</h1>
-          <p className="text-sm text-gray-500">Gestión Universitaria</p>
+          <h1 className="text-xl font-bold text-gray-900">Base de Contactos de Colegios</h1>
         </div>
         {onToggleSidebar && (
           <button
@@ -146,6 +145,32 @@ export default function Sidebar({ currentPage, onPageChange, user, onLogout, onT
               >
                 <Eye className="w-5 h-5 mr-3" />
                 Contactos Completa
+              </button>
+            </li>
+          )}
+          {(() => {
+            console.log('🔍 Sidebar Debug - Checking Graduaciones visibility:');
+            console.log('👤 User role:', user?.role);
+            console.log('📋 User permissions:', userPermissions);
+            console.log('✅ Has VER_GRADUACIONES:', userPermissions.includes('VER_GRADUACIONES'));
+            console.log('🔑 Is admin:', user?.role === 'admin' || user?.role === 'ADMIN');
+            
+            const canViewGraduaciones = userPermissions.includes('VER_GRADUACIONES') || user?.role === 'admin' || user?.role === 'ADMIN';
+            console.log('🎯 Can view Graduaciones:', canViewGraduaciones);
+            
+            return canViewGraduaciones;
+          })() && (
+            <li>
+              <button
+                onClick={() => onPageChange('graduaciones')}
+                className={`w-full flex items-center px-4 py-3 text-left rounded-lg transition-colors ${
+                  currentPage === 'graduaciones'
+                    ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                }`}
+              >
+                <GraduationCap className="w-5 h-5 mr-3" />
+                Graduaciones
               </button>
             </li>
           )}

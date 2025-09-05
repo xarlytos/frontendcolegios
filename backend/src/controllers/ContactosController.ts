@@ -13,9 +13,7 @@ export class ContactosController {
   static async getContactos(req: AuthRequest, res: Response) {
     try {
       const {
-        universidadId,
-        titulacionId,
-        curso,
+        nombreColegio,
         q,
         page = 1,
         limit = 20,
@@ -30,15 +28,14 @@ export class ContactosController {
       // Construir filtros
       const filtros: any = {};
       
-      if (universidadId) filtros.universidadId = universidadId;
-      if (titulacionId) filtros.titulacionId = titulacionId;
-      if (curso) filtros.curso = parseInt(curso as string);
+      if (nombreColegio) filtros.nombreColegio = { $regex: nombreColegio, $options: 'i' };
       
       if (q) {
         filtros.$or = [
           { nombreCompleto: { $regex: q, $options: 'i' } },
           { telefono: { $regex: q, $options: 'i' } },
-          { instagram: { $regex: q, $options: 'i' } }
+          { instagram: { $regex: q, $options: 'i' } },
+          { nombreColegio: { $regex: q, $options: 'i' } }
         ];
       }
 
@@ -61,8 +58,6 @@ export class ContactosController {
       // Ejecutar consulta
       const [contactos, total] = await Promise.all([
         Contacto.find(filtros)
-          .populate('universidadId', 'nombre')
-          .populate('titulacionId', 'nombre')
           .populate('comercialId', 'nombre email')
           .sort(sort)
           .skip(skip)
@@ -99,8 +94,6 @@ export class ContactosController {
 
       // Obtener todos los contactos sin filtros
       const contactos = await Contacto.find({})
-        .populate('universidadId', 'nombre')
-        .populate('titulacionId', 'nombre')
         .populate('comercialId', 'nombre email')
         .populate('createdBy', 'nombre email')
         .sort({ fechaAlta: -1 }); // Ordenar por fecha de alta descendente
@@ -128,8 +121,6 @@ export class ContactosController {
       const { id } = req.params;
       
       const contacto = await Contacto.findById(id)
-        .populate('universidadId', 'nombre')
-        .populate('titulacionId', 'nombre')
         .populate('comercialId', 'nombre email')
         .populate('createdBy', 'nombre email');
 
@@ -167,12 +158,10 @@ export class ContactosController {
     try {
       // Resolver conflicto en la extracción de campos
       const {
-        universidadId,
-        titulacionId,
-        curso,
         nombreCompleto,
         telefono,
         instagram,
+        nombreColegio,
         anioNacimiento,
         comercialId,
         diaLibre // ← Mantener este campo
@@ -187,12 +176,10 @@ export class ContactosController {
       }
 
       const nuevoContacto = new Contacto({
-        universidadId,
-        titulacionId,
-        curso,
         nombreCompleto,
         telefono,
         instagram,
+        nombreColegio,
         anioNacimiento,
         comercialId: comercialId || req.user!.userId,
         createdBy: req.user!.userId,
@@ -213,8 +200,6 @@ export class ContactosController {
       });
 
       const contactoCompleto = await Contacto.findById(nuevoContacto._id)
-        .populate('universidadId', 'nombre')
-        .populate('titulacionId', 'nombre')
         .populate('comercialId', 'nombre email');
 
       res.status(201).json({
@@ -258,9 +243,7 @@ export class ContactosController {
         id,
         { ...datosActualizacion, fechaModificacion: new Date() },
         { new: true, runValidators: true }
-      ).populate('universidadId', 'nombre')
-       .populate('titulacionId', 'nombre')
-       .populate('comercialId', 'nombre email');
+      ).populate('comercialId', 'nombre email');
 
       // Registrar en auditoría
       await AuditLog.create({
@@ -467,8 +450,7 @@ export class ContactosController {
           console.log(`📋 Contacto ${index + 1}:`, {
             nombreCompleto: contacto.nombreCompleto,
             telefono: contacto.telefono,
-            universidadId: contacto.universidadId,
-            titulacionId: contacto.titulacionId,
+            nombreColegio: contacto.nombreColegio,
             comercialId: contacto.comercialId
           });
         });
@@ -505,12 +487,12 @@ export class ContactosController {
             erroresValidacion.push('Debe proporcionar al menos teléfono o Instagram');
           }
           
-          if (!data.universidadId?.trim()) {
-            erroresValidacion.push('Universidad es requerida');
+          if (!data.nombreColegio?.trim()) {
+            erroresValidacion.push('Nombre del colegio es requerido');
           }
           
-          if (!data.titulacionId?.trim()) {
-            erroresValidacion.push('Titulación es requerida');
+          if (!data.anioNacimiento) {
+            erroresValidacion.push('Año de nacimiento es requerido');
           }
 
           if (erroresValidacion.length > 0) {
@@ -527,10 +509,8 @@ export class ContactosController {
             nombreCompleto: data.nombreCompleto.trim(),
             telefono: data.telefono?.trim() || null,
             instagram: data.instagram?.trim() || null,
-            universidadId: data.universidadId.trim(),
-            titulacionId: data.titulacionId.trim(),
-            curso: data.curso ? parseInt(data.curso) : null,
-            anioNacimiento: data.anioNacimiento ? parseInt(data.anioNacimiento) : null,
+            nombreColegio: data.nombreColegio.trim(),
+            anioNacimiento: parseInt(data.anioNacimiento),
             comercialId: data.comercialId?.trim() || req.user!.userId,
             createdBy: req.user!.userId
           });
@@ -588,9 +568,7 @@ export class ContactosController {
     try {
       const { comercialId } = req.params;
       const {
-        universidadId,
-        titulacionId,
-        curso,
+        nombreColegio,
         q,
         page = 1,
         limit = 20,
@@ -625,9 +603,7 @@ export class ContactosController {
       };
       
       // Aplicar filtros adicionales
-      if (universidadId) filtros.universidadId = universidadId;
-      if (titulacionId) filtros.titulacionId = titulacionId;
-      if (curso) filtros.curso = parseInt(curso as string);
+      if (nombreColegio) filtros.nombreColegio = { $regex: nombreColegio, $options: 'i' };
       
       if (q) {
         filtros.$and = [
@@ -636,7 +612,8 @@ export class ContactosController {
             $or: [
               { nombreCompleto: { $regex: q, $options: 'i' } },
               { telefono: { $regex: q, $options: 'i' } },
-              { instagram: { $regex: q, $options: 'i' } }
+              { instagram: { $regex: q, $options: 'i' } },
+              { nombreColegio: { $regex: q, $options: 'i' } }
             ]
           }
         ];
@@ -650,8 +627,6 @@ export class ContactosController {
       // Ejecutar consulta
       const [contactos, total] = await Promise.all([
         Contacto.find(filtros)
-          .populate('universidadId', 'nombre')
-          .populate('titulacionId', 'nombre')
           .populate('comercialId', 'nombre email')
           .sort(sort)
           .skip(skip)
@@ -683,72 +658,4 @@ export class ContactosController {
     }
   }
 
-  // PUT /contactos/aumentar-curso
-  static async aumentarCursoTodos(req: AuthRequest, res: Response) {
-    try {
-      // Verificar que el usuario sea administrador
-      if (req.user!.rol !== RolUsuario.ADMIN) {
-        return res.status(403).json({
-          success: false,
-          message: 'Solo los administradores pueden realizar esta acción'
-        });
-      }
-
-      // Obtener todos los contactos antes de la actualización para auditoría
-      const contactosAntes = await Contacto.find({}).select('_id curso');
-      
-      // Actualizar todos los contactos incrementando el curso en 1
-      const resultado = await Contacto.updateMany(
-        {}, // Sin filtros, actualizar todos
-        { 
-          $inc: { curso: 1 }, // Incrementar curso en 1
-          fechaModificacion: new Date()
-        }
-      );
-
-      // Obtener los contactos actualizados para auditoría
-      const contactosDespues = await Contacto.find({}).select('_id curso');
-
-      // Registrar en auditoría la operación masiva
-      await AuditLog.create({
-        usuarioId: req.user!.userId,
-        entidad: EntidadAudit.CONTACTO,
-        entidadId: 'BULK_UPDATE', // Identificador especial para operaciones masivas
-        accion: AccionAudit.UPDATE,
-        antes: { 
-          operacion: 'aumentar_curso_masivo',
-          contactos_afectados: resultado.modifiedCount,
-          resumen_antes: contactosAntes.reduce((acc, c) => {
-            acc[c.curso] = (acc[c.curso] || 0) + 1;
-            return acc;
-          }, {} as Record<number, number>)
-        },
-        despues: {
-          operacion: 'aumentar_curso_masivo',
-          contactos_afectados: resultado.modifiedCount,
-          resumen_despues: contactosDespues.reduce((acc, c) => {
-            acc[c.curso] = (acc[c.curso] || 0) + 1;
-            return acc;
-          }, {} as Record<number, number>)
-        },
-        ip: req.ip,
-        userAgent: req.get('User-Agent')
-      });
-
-      res.json({
-        success: true,
-        message: `Se ha aumentado el curso de ${resultado.modifiedCount} contactos exitosamente`,
-        data: {
-          contactosModificados: resultado.modifiedCount,
-          contactosCoincidentes: resultado.matchedCount
-        }
-      });
-    } catch (error) {
-      console.error('Error aumentando curso de contactos:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Error interno del servidor'
-      });
-    }
-  }
 }

@@ -8,6 +8,7 @@ import estadisticasRoutes from './routes/estadisticasRoutes';
 import usuariosRoutes from './routes/usuariosRoutes';
 import universidadesRoutes from './routes/universidadesRoutes';
 import titulacionesRoutes from './routes/titulacionesRoutes';
+import graduacionesRoutes from './routes/graduacionesRoutes';
 import { errorHandler } from './middleware/errorHandler';
 import { authenticateToken } from './middleware/auth';
 
@@ -56,6 +57,7 @@ app.use('/api/contactos', authenticateToken, contactosRoutes);
 app.use('/api/estadisticas', authenticateToken, estadisticasRoutes);
 app.use('/api/universidades', authenticateToken, universidadesRoutes);
 app.use('/api/titulaciones', authenticateToken, titulacionesRoutes);
+app.use('/api/graduaciones', authenticateToken, graduacionesRoutes);
 
 // COMENTAR O ELIMINAR esta línea problemática:
 // app.use('/api', authenticateToken);

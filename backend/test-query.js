@@ -1,8 +1,11 @@
 const mongoose = require('mongoose');
+require('dotenv').config();
 
 async function testQuery() {
   try {
-    await mongoose.connect('mongodb://localhost:27017/proyecto-garrote');
+    const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/colegios_db';
+    console.log('Conectando a:', MONGODB_URI);
+    await mongoose.connect(MONGODB_URI);
     console.log('✅ Conectado a MongoDB');
     
     const Permiso = mongoose.model('Permiso', new mongoose.Schema({

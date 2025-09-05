@@ -66,6 +66,12 @@ router.delete('/:id',
 // Gestión de contraseñas
 router.put('/:id/password', UsuariosController.cambiarPassword);
 
+// Obtener todos los permisos disponibles
+router.get('/permisos-disponibles', 
+  authenticateToken,
+  UsuariosController.obtenerPermisosDisponibles
+);
+
 // Permisos efectivos
 router.get('/:id/permisos', 
   requirePermission('GESTIONAR_USUARIOS'), 
