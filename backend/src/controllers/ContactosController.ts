@@ -164,7 +164,10 @@ export class ContactosController {
         nombreColegio,
         anioNacimiento,
         comercialId,
-        diaLibre // ← Mantener este campo
+        diaLibre, // ← Mantener este campo
+        universidadId,
+        titulacionId,
+        curso
       } = req.body;
 
       // Validaciones
@@ -183,7 +186,10 @@ export class ContactosController {
         anioNacimiento,
         comercialId: comercialId || req.user!.userId,
         createdBy: req.user!.userId,
-        diaLibre // ← Mantener este campo
+        diaLibre, // ← Mantener este campo
+        universidadId,
+        titulacionId,
+        curso
       });
 
       await nuevoContacto.save();

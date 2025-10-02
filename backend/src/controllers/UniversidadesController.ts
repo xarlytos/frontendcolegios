@@ -6,7 +6,7 @@ import { Contacto } from '../models/Contacto';
 import { Usuario } from '../models/Usuario';
 import { JerarquiaUsuarios } from '../models/JerarquiaUsuarios'; // RESTAURADO
 import { AuditLog, EntidadAudit, AccionAudit } from '../models/AuditLog';
-import { AuthRequest, RolUsuario } from '../types'; // Fixed: Import both from '../types'
+import { AuthRequest, RolUsuario } from '../types'; // Fixed: Import both fsrom '../types'
 
 export class UniversidadesController {
   // Obtener todas las universidades

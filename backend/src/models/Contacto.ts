@@ -14,6 +14,9 @@ export interface IContacto extends Document {
   createdAt: Date;
   updatedAt: Date;
   diaLibre?: string; // ← Mantener este campo
+  universidadId: Types.ObjectId; // ← Campo requerido
+  titulacionId: Types.ObjectId; // ← Campo requerido
+  curso: string; // ← Campo requerido
 }
 
 // Resolver conflicto en el schema
@@ -67,6 +70,21 @@ const contactoSchema = new Schema<IContacto>({
     type: String,
     enum: ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'],
     required: false
+  },
+  universidadId: {
+    type: Schema.Types.ObjectId,
+    ref: 'Universidad',
+    required: true
+  },
+  titulacionId: {
+    type: Schema.Types.ObjectId,
+    ref: 'Titulacion',
+    required: true
+  },
+  curso: {
+    type: String,
+    required: true,
+    trim: true
   }
 }, {
   timestamps: true
