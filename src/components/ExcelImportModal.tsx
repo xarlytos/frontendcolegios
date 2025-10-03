@@ -2,7 +2,6 @@ import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { X, Upload, FileSpreadsheet, AlertTriangle, Check, Trash2 } from 'lucide-react';
 import { Contact } from '../types';
 import { User } from '../types/auth';
-import universidadesService, { Universidad } from '../services/universidadesService';
 import { usersService } from '../services/usersService';
 import { contactsService } from '../services/contactsService';
 import * as XLSX from 'xlsx';
@@ -32,13 +31,12 @@ interface ColumnMapping {
 }
 
 const CONTACT_FIELDS = {
-  nombre: 'Nombre',
+  nombre: 'Nombre Completo',
   telefono: 'Teléfono',
   instagram: 'Instagram',
-  universidad: 'Universidad',
-  titulacion: 'Titulación',
-  curso: 'Curso',
+  nombre_colegio: 'Nombre del Colegio',
   año_nacimiento: 'Año de Nacimiento',
+  dia_libre: 'Día Libre',
   comercial: 'Comercial'
 };
 
@@ -50,20 +48,14 @@ export default function ExcelImportModal({ isOpen, onClose, onImport, existingCo
   const [mappedContacts, setMappedContacts] = useState<MappedContact[]>([]);
   const [fileName, setFileName] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
-  const [universidades, setUniversidades] = useState<Universidad[]>([]);
   const [comerciales, setComercialesUsuarios] = useState<User[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Cargar universidades y usuarios cuando el modal se abra
+  // Cargar usuarios comerciales cuando el modal se abra
   useEffect(() => {
     if (isOpen) {
       const loadData = async () => {
         try {
-          // Cargar universidades
-          const universidadesData = await universidadesService.getUniversidades();
-          console.log('Datos de universidades cargados:', universidadesData);
-          setUniversidades(universidadesData);
-          
           // Cargar usuarios comerciales
           const usersResponse = await usersService.getUsers({ rol: 'COMERCIAL' });
           console.log('Datos de usuarios cargados:', usersResponse);
@@ -142,24 +134,12 @@ export default function ExcelImportModal({ isOpen, onClose, onImport, existingCo
       let isDuplicate = false;
       const duplicateFields: string[] = [];
 
-      // Primer paso: mapear universidad para tenerla disponible para titulaciones
+      // Mapear los datos del Excel a los campos de contacto
       Object.entries(columnMapping).forEach(([excelCol, contactField]) => {
-        if (contactField === 'universidad' && row[excelCol] !== undefined) {
-          const universidadValue = row[excelCol]?.toString().trim();
-          const universidad = universidades.find(u => 
-            u.codigo === universidadValue || u.nombre === universidadValue
-          );
-          contactData[contactField] = universidad ? universidad.nombre : universidadValue;
-        }
-      });
-
-      // Segundo paso: mapear el resto de datos incluyendo titulaciones
-      Object.entries(columnMapping).forEach(([excelCol, contactField]) => {
-        if (contactField && contactField !== 'universidad' && row[excelCol] !== undefined) {
+        if (contactField && row[excelCol] !== undefined) {
           const value = row[excelCol];
           
           switch (contactField) {
-            case 'curso':
             case 'año_nacimiento': {
               const numValue = parseInt(value as string);
               if (!isNaN(numValue)) {
@@ -178,37 +158,23 @@ export default function ExcelImportModal({ isOpen, onClose, onImport, existingCo
               contactData[contactField] = instagram;
               break;
             }
-            // Modificar la lógica de mapeo de titulación (líneas 182-196)
-            case 'titulacion': {
-              const titulacionValue = value?.toString().trim();
-              
-              // Verificar si es un valor placeholder o inválido
-              if (titulacionValue === '-- Seleccionar Titulación --' || 
-                  titulacionValue === '' || 
-                  titulacionValue === null || 
-                  titulacionValue === undefined) {
-                // Marcar como titulación inválida pero mantener el valor para mostrar en UI
-                contactData[contactField] = '-- Seleccionar Titulación --';
-                break;
-              }
-              
-              // Ahora la universidad ya está mapeada, buscar la titulación por código o nombre
-              if (contactData.universidad) {
-                const universidad = universidades.find(u => u.nombre === contactData.universidad);
-                if (universidad?.titulaciones) {
-                  const titulacion = universidad.titulaciones.find(t => 
-                    t.codigo === titulacionValue || t.nombre === titulacionValue
-                  );
-                  contactData[contactField] = titulacion ? titulacion.nombre : '-- Seleccionar Titulación --';
-                  // Guardar también el ID de la titulación solo si se encuentra
-                  if (titulacion) {
-                    (contactData as any).titulacionId = titulacion._id;
-                  }
-                } else {
-                  contactData[contactField] = '-- Seleccionar Titulación --';
-                }
-              } else {
-                contactData[contactField] = '-- Seleccionar Titulación --';
+            case 'dia_libre': {
+              const diaLibre = value?.toString().trim();
+              // Validar que sea un día válido
+              const diasValidos = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+              if (diaLibre && diasValidos.includes(diaLibre)) {
+                contactData[contactField] = diaLibre;
+              } else if (diaLibre) {
+                // Intentar mapear variaciones comunes
+                const diaMapeado = diaLibre.toLowerCase();
+                if (diaMapeado.includes('lunes')) contactData[contactField] = 'Lunes';
+                else if (diaMapeado.includes('martes')) contactData[contactField] = 'Martes';
+                else if (diaMapeado.includes('miércoles') || diaMapeado.includes('miercoles')) contactData[contactField] = 'Miércoles';
+                else if (diaMapeado.includes('jueves')) contactData[contactField] = 'Jueves';
+                else if (diaMapeado.includes('viernes')) contactData[contactField] = 'Viernes';
+                else if (diaMapeado.includes('sábado') || diaMapeado.includes('sabado')) contactData[contactField] = 'Sábado';
+                else if (diaMapeado.includes('domingo')) contactData[contactField] = 'Domingo';
+                else contactData[contactField] = diaLibre; // Mantener el valor original si no se puede mapear
               }
               break;
             }
@@ -231,25 +197,12 @@ export default function ExcelImportModal({ isOpen, onClose, onImport, existingCo
         }
       });
 
-      // Mapear universidad ID después de que se haya establecido la universidad
-      if (contactData.universidad) {
-        const universidad = universidades.find(u => u.nombre === contactData.universidad);
-        if (universidad) {
-          (contactData as any).universidadId = universidad._id;
-        }
-      }
-
-      // Modificar las validaciones (líneas 232-238)
       // Validaciones obligatorias
       if (!contactData.nombre) {
         errors.push('El nombre es obligatorio');
       }
-      if (!contactData.universidad) {
-        errors.push('La universidad es obligatoria');
-      }
-      // Verificar si la titulación es válida (no es placeholder)
-      if (!contactData.titulacion || contactData.titulacion === '-- Seleccionar Titulación --') {
-        errors.push('La titulación es obligatoria');
+      if (!contactData.nombre_colegio) {
+        errors.push('El nombre del colegio es obligatorio');
       }
       if (!contactData.telefono && !contactData.instagram) {
         errors.push('Se requiere al menos teléfono o Instagram');
@@ -307,14 +260,9 @@ export default function ExcelImportModal({ isOpen, onClose, onImport, existingCo
       let isDuplicate = false;
       const duplicateFields: string[] = [];
 
-      // Modificar handleEditContact para manejar titulación (líneas 290-295)
-      // Validaciones básicas
+      // Validaciones básicas para colegios
       if (!contact.data.nombre) errors.push('El nombre es obligatorio');
-      if (!contact.data.universidad) errors.push('La universidad es obligatoria');
-      // Verificar si la titulación es válida
-      if (!contact.data.titulacion || contact.data.titulacion === '-- Seleccionar Titulación --') {
-        errors.push('La titulación es obligatoria');
-      }
+      if (!contact.data.nombre_colegio) errors.push('El nombre del colegio es obligatorio');
       if (!contact.data.telefono && !contact.data.instagram) {
         errors.push('Se requiere al menos teléfono o Instagram');
       }
@@ -394,15 +342,14 @@ export default function ExcelImportModal({ isOpen, onClose, onImport, existingCo
         comercialId: contactData.comercialId
       });
       
-      // Mapear los datos del frontend al formato esperado por el backend
+      // Mapear los datos del frontend al formato esperado por el backend para colegios
       const mappedContact = {
         nombreCompleto: contactData.nombre,
         telefono: contactData.telefono,
         instagram: contactData.instagram,
-        universidadId: contactData.universidadId,
-        titulacionId: contactData.titulacionId,
-        curso: contactData.curso,
+        nombreColegio: contactData.nombre_colegio,
         anioNacimiento: contactData.año_nacimiento,
+        diaLibre: contactData.dia_libre,
         comercialId: contactData.comercialId || null
       };
       
@@ -727,83 +674,35 @@ export default function ExcelImportModal({ isOpen, onClose, onImport, existingCo
                       </div>
                       <div>
                         <label className="block text-xs font-medium text-gray-700 mb-1">
-                          Universidad *
+                          Nombre del Colegio *
                         </label>
-                        <select
-                          value={contact.data.universidad || ''}
-                          onChange={(e) => handleEditContact(index, 'universidad', e.target.value)}
-                          className="w-full text-sm border border-gray-300 rounded px-2 py-1 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        >
-                          <option value="">-- Seleccionar Universidad --</option>
-                          {universidades.map((uni, index) => (
-                            <option key={index} value={uni.nombre}>
-                              {uni.nombre}
-                            </option>
-                          ))}
-                        </select>
+                        <input
+                          type="text"
+                          value={contact.data.nombre_colegio || ''}
+                          onChange={(e) => handleEditContact(index, 'nombre_colegio', e.target.value)}
+                          className={`w-full text-sm border rounded px-2 py-1 ${
+                            contact.duplicateFields.includes('nombre_colegio') ? 'border-red-300' : 'border-gray-300'
+                          }`}
+                        />
                       </div>
                       <div>
                         <label className="block text-xs font-medium text-gray-700 mb-1">
-                          Titulación *
+                          Día Libre
                         </label>
                         <select
-                          value={contact.data.titulacion || ''}
-                          onChange={(e) => {
-                            const newValue = e.target.value;
-                            handleEditContact(index, 'titulacion', newValue);
-                            
-                            // Si se selecciona una titulación válida, actualizar el titulacionId
-                            if (newValue && newValue !== '-- Seleccionar Titulación --' && contact.data.universidad) {
-                              const universidad = universidades.find(uni => uni.nombre === contact.data.universidad);
-                              const titulacion = universidad?.titulaciones?.find(tit => tit.nombre === newValue);
-                              if (titulacion) {
-                                // Actualizar también el titulacionId
-                                setMappedContacts(prev => {
-                                  const updated = [...prev];
-                                  updated[index] = {
-                                    ...updated[index],
-                                    data: {
-                                      ...updated[index].data,
-                                      titulacionId: titulacion._id
-                                    }
-                                  };
-                                  return updated;
-                                });
-                              }
-                            }
-                          }}
-                          className={`w-full text-sm border rounded px-2 py-1 focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                            !contact.data.titulacion || contact.data.titulacion === '-- Seleccionar Titulación --'
-                              ? 'border-red-300 bg-red-50' 
-                              : 'border-gray-300'
-                          }`}
-                          disabled={!contact.data.universidad}
+                          value={contact.data.dia_libre || ''}
+                          onChange={(e) => handleEditContact(index, 'dia_libre', e.target.value)}
+                          className="w-full text-sm border border-gray-300 rounded px-2 py-1 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         >
-                          <option value="">-- Seleccionar Titulación --</option>
-                          {contact.data.universidad && universidades
-                            .find(uni => uni.nombre === contact.data.universidad)?.titulaciones
-                            ?.map((tit, titIndex) => (
-                              <option key={titIndex} value={tit.nombre}>
-                                {tit.nombre}
-                              </option>
-                            ))}
+                          <option value="">-- Seleccionar Día --</option>
+                          <option value="Lunes">Lunes</option>
+                          <option value="Martes">Martes</option>
+                          <option value="Miércoles">Miércoles</option>
+                          <option value="Jueves">Jueves</option>
+                          <option value="Viernes">Viernes</option>
+                          <option value="Sábado">Sábado</option>
+                          <option value="Domingo">Domingo</option>
                         </select>
-                      {(!contact.data.titulacion || contact.data.titulacion === '-- Seleccionar Titulación --') && (
-                        <p className="text-xs text-red-600 mt-1">Debe seleccionar una titulación válida</p>
-                      )}
-                    </div>
-                      <div>
-                        <label className="block text-xs font-medium text-gray-700 mb-1">
-                          Curso
-                        </label>
-                        <input
-                          type="number"
-                          value={contact.data.curso || ''}
-                          onChange={(e) => handleEditContact(index, 'curso', parseInt(e.target.value) || '')}
-                          className="w-full text-sm border border-gray-300 rounded px-2 py-1"
-                          min="1"
-                          max="6"
-                        />
                       </div>
                       <div>
                         <label className="block text-xs font-medium text-gray-700 mb-1">

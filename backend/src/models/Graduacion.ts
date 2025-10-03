@@ -79,3 +79,4 @@ graduacionSchema.index({ estado: 1 });
 
 export const Graduacion = model<IGraduacion>('Graduacion', graduacionSchema);
 
+
