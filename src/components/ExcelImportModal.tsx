@@ -2,9 +2,9 @@ import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { X, Upload, FileSpreadsheet, AlertTriangle, Check, Trash2 } from 'lucide-react';
 import { Contact } from '../types';
 import { User } from '../types/auth';
-import { usersService } from '../services/usersService';
 import { contactsService } from '../services/contactsService';
 import universidadesService from '../services/universidadesService';
+import { useAuth } from '../hooks/useAuth';
 import * as XLSX from 'xlsx';
 
 interface ExcelImportModalProps {
@@ -41,6 +41,7 @@ const CONTACT_FIELDS = {
 };
 
 export default function ExcelImportModal({ isOpen, onClose, onImport, existingContacts }: ExcelImportModalProps) {
+  const { users, getAllUsers } = useAuth();
   const [step, setStep] = useState<'upload' | 'preview' | 'mapping' | 'validation'>('upload');
   const [excelData, setExcelData] = useState<ExcelRow[]>([]);
   const [excelColumns, setExcelColumns] = useState<string[]>([]);
@@ -57,17 +58,15 @@ export default function ExcelImportModal({ isOpen, onClose, onImport, existingCo
     if (isOpen) {
       const loadData = async () => {
         try {
-          // Cargar usuarios comerciales
+          // Cargar usuarios comerciales usando useAuth como en ContactForm
           console.log('🔍 Intentando cargar comerciales...');
-          const usersResponse = await usersService.getUsers({ rol: 'COMERCIAL' });
-          console.log('📋 Respuesta completa de usuarios:', usersResponse);
-          console.log('👥 Usuarios obtenidos:', usersResponse.data?.usuarios);
-          console.log('🔍 Estructura completa de la respuesta:', JSON.stringify(usersResponse, null, 2));
+          await getAllUsers();
+          console.log('👥 Usuarios obtenidos desde useAuth:', users);
           
           // Filtrar solo comerciales activos
-          const comercialesActivos = usersResponse.data?.usuarios?.filter((user: any) => 
-            user.rol === 'COMERCIAL' && user.activo === true
-          ) || [];
+          const comercialesActivos = users.filter(user => 
+            user.role === 'comercial' && user.activo === true
+          );
           
           setComercialesUsuarios(comercialesActivos);
           console.log('✅ Comerciales activos cargados:', comercialesActivos);
@@ -99,7 +98,7 @@ export default function ExcelImportModal({ isOpen, onClose, onImport, existingCo
       };
       loadData();
     }
-  }, [isOpen]);
+  }, [isOpen, users, getAllUsers]);
 
   // Monitorear cambios en los estados
   useEffect(() => {
