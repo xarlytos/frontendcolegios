@@ -48,6 +48,7 @@ export default function ExcelImportModal({ isOpen, onClose, onImport, existingCo
   const [fileName, setFileName] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [comerciales, setComercialesUsuarios] = useState<User[]>([]);
+  const [colegios, setColegios] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Cargar usuarios comerciales cuando el modal se abra
@@ -66,6 +67,11 @@ export default function ExcelImportModal({ isOpen, onClose, onImport, existingCo
           ) || [];
           setComercialesUsuarios(comercialesActivos);
           console.log('Comerciales activos:', comercialesActivos);
+
+          // Cargar colegios únicos de los contactos existentes
+          const colegiosUnicos = [...new Set(existingContacts.map(contact => contact.nombre_colegio))].sort();
+          setColegios(colegiosUnicos);
+          console.log('Colegios disponibles:', colegiosUnicos);
         } catch (error) {
           console.error('Error al cargar datos:', error);
         }
@@ -155,6 +161,15 @@ export default function ExcelImportModal({ isOpen, onClose, onImport, existingCo
                 instagram = instagram.replace(/^@/, '');
               }
               contactData[contactField] = instagram;
+              break;
+            }
+            case 'nombre_colegio': {
+              const colegioValue = value?.toString().trim();
+              // Buscar colegio por nombre exacto
+              const colegioEncontrado = colegios.find(c => 
+                c.toLowerCase() === colegioValue?.toLowerCase()
+              );
+              contactData[contactField] = colegioEncontrado || colegioValue;
               break;
             }
             case 'comercial': {
@@ -646,14 +661,45 @@ export default function ExcelImportModal({ isOpen, onClose, onImport, existingCo
                         <label className="block text-xs font-medium text-gray-700 mb-1">
                           Nombre del Colegio *
                         </label>
-                        <input
-                          type="text"
-                          value={contact.data.nombre_colegio || ''}
-                          onChange={(e) => handleEditContact(index, 'nombre_colegio', e.target.value)}
-                          className={`w-full text-sm border rounded px-2 py-1 ${
-                            contact.duplicateFields.includes('nombre_colegio') ? 'border-red-300' : 'border-gray-300'
-                          }`}
-                        />
+                        {(() => {
+                          const colegioValue = contact.data.nombre_colegio?.toString().trim();
+                          const colegioEncontrado = colegios.find(c => 
+                            c.toLowerCase() === colegioValue?.toLowerCase()
+                          );
+                          
+                          if (colegioEncontrado) {
+                            // Auto-rellenado cuando hay coincidencia
+                            return (
+                              <div className="flex items-center space-x-2">
+                                <input
+                                  type="text"
+                                  value={colegioEncontrado}
+                                  readOnly
+                                  className="flex-1 text-sm border border-green-300 bg-green-50 rounded px-2 py-1"
+                                />
+                                <Check className="w-4 h-4 text-green-600" />
+                              </div>
+                            );
+                          } else {
+                            // Desplegable cuando no hay coincidencia
+                            return (
+                              <select
+                                value={contact.data.nombre_colegio || ''}
+                                onChange={(e) => handleEditContact(index, 'nombre_colegio', e.target.value)}
+                                className={`w-full text-sm border rounded px-2 py-1 focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                                  contact.duplicateFields.includes('nombre_colegio') ? 'border-red-300' : 'border-gray-300'
+                                }`}
+                              >
+                                <option value="">-- Seleccionar Colegio --</option>
+                                {colegios.map((colegio, colegioIndex) => (
+                                  <option key={colegioIndex} value={colegio}>
+                                    {colegio}
+                                  </option>
+                                ))}
+                              </select>
+                            );
+                          }
+                        })()} 
                       </div>
                       <div>
                         <label className="block text-xs font-medium text-gray-700 mb-1">
