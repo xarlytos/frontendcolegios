@@ -21,10 +21,7 @@ export default function ContactForm({ contact, onSubmit, onCancel }: ContactForm
     telefono: '',
     instagram: '',
     año_nacimiento: null as number | null,
-    comercial: '',
-    universidadId: '',
-    titulacionId: '',
-    curso: ''
+    comercial: ''
   });
 
   const [colegios, setColegios] = useState<Universidad[]>([]);
@@ -113,7 +110,7 @@ export default function ContactForm({ contact, onSubmit, onCancel }: ContactForm
       newErrors.año_nacimiento = 'El año de nacimiento es requerido y debe estar entre 1900 y el año actual';
     }
 
-    // Validación: al menos uno entre teléfono e Instagram
+    // Validación: al menos uno entre teléfono e Instagram (opcional)
     if ((!formData.telefono || !formData.telefono.trim()) && (!formData.instagram || !formData.instagram.trim())) {
       newErrors.contacto = 'Debe proporcionar al menos un número de teléfono o Instagram';
     }
@@ -127,18 +124,6 @@ export default function ContactForm({ contact, onSubmit, onCancel }: ContactForm
       newErrors.instagram = 'El formato del Instagram no es válido (solo letras, números, puntos y guiones bajos, máximo 30 caracteres)';
     }
 
-    // Validaciones para los nuevos campos obligatorios
-    if (!formData.universidadId || !formData.universidadId.trim()) {
-      newErrors.universidadId = 'La universidad es obligatoria';
-    }
-
-    if (!formData.titulacionId || !formData.titulacionId.trim()) {
-      newErrors.titulacionId = 'La titulación es obligatoria';
-    }
-
-    if (!formData.curso || !formData.curso.trim()) {
-      newErrors.curso = 'El curso es obligatorio';
-    }
 
     // Validación de duplicados
     const duplicates = checkDuplicates(
@@ -168,10 +153,7 @@ export default function ContactForm({ contact, onSubmit, onCancel }: ContactForm
         telefono: formData.telefono || undefined,
         instagram: formData.instagram || undefined,
         año_nacimiento: formData.año_nacimiento!,
-        comercial: formData.comercial || undefined,
-        universidadId: formData.universidadId,
-        titulacionId: formData.titulacionId,
-        curso: formData.curso
+        comercial: formData.comercial || undefined
       };
       
       console.log('📝 Submitting contact form:', submitData);
@@ -345,67 +327,6 @@ export default function ContactForm({ contact, onSubmit, onCancel }: ContactForm
             </div>
           )}
 
-          {/* 7. Universidad - Obligatorio */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Universidad *
-            </label>
-            <select
-              value={formData.universidadId}
-              onChange={(e) => handleChange('universidadId', e.target.value)}
-              className={`w-full border rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${
-                errors.universidadId ? 'border-red-300' : 'border-gray-300'
-              }`}
-            >
-              <option value="">Selecciona una universidad</option>
-              {colegios.map((colegio) => (
-                <option key={(colegio as any)._id || colegio.id} value={(colegio as any)._id || colegio.id}>
-                  {colegio.nombre}
-                </option>
-              ))}
-            </select>
-            {errors.universidadId && (
-              <p className="text-red-500 text-sm mt-1">{errors.universidadId}</p>
-            )}
-          </div>
-
-          {/* 8. Titulación - Obligatorio */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Titulación *
-            </label>
-            <input
-              type="text"
-              value={formData.titulacionId}
-              onChange={(e) => handleChange('titulacionId', e.target.value)}
-              className={`w-full border rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${
-                errors.titulacionId ? 'border-red-300' : 'border-gray-300'
-              }`}
-              placeholder="Ej: Grado en Ingeniería Informática"
-            />
-            {errors.titulacionId && (
-              <p className="text-red-500 text-sm mt-1">{errors.titulacionId}</p>
-            )}
-          </div>
-
-          {/* 9. Curso - Obligatorio */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Curso *
-            </label>
-            <input
-              type="text"
-              value={formData.curso}
-              onChange={(e) => handleChange('curso', e.target.value)}
-              className={`w-full border rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${
-                errors.curso ? 'border-red-300' : 'border-gray-300'
-              }`}
-              placeholder="Ej: 1º, 2º, 3º, 4º"
-            />
-            {errors.curso && (
-              <p className="text-red-500 text-sm mt-1">{errors.curso}</p>
-            )}
-          </div>
 
           <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200">
             <button

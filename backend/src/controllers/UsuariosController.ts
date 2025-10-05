@@ -20,9 +20,12 @@ export class UsuariosController {
       const { page = 1, limit = 10, search, rol, estado } = req.query;
       console.log('🔍 Parámetros de búsqueda:', { page, limit, search, rol, estado });
       
-      const filter: any = {
-        rol: 'COMERCIAL' // Solo mostrar usuarios comerciales
-      };
+      const filter: any = {};
+      
+      // Aplicar filtro de rol si se proporciona
+      if (rol) {
+        filter.rol = rol;
+      }
       
       if (search) {
         filter.$or = [
@@ -31,10 +34,9 @@ export class UsuariosController {
         ];
       }
       
-      // Nota: Se ignoran los filtros de rol y estado del query para forzar solo COMERCIAL
       if (estado) filter.estado = estado;
       
-      console.log('🎯 Filtro aplicado (solo COMERCIAL):', filter);
+      console.log('🎯 Filtro aplicado:', filter);
       
       const usuarios = await Usuario.find(filter)
         .select('-passwordHash')
