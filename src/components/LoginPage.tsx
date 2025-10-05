@@ -63,7 +63,7 @@ export default function LoginPage({ onLogin, isLoading }: LoginPageProps) {
             <Users className="w-8 h-8 text-white" />
           </div>
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Base de Contactos</h1>
-          <p className="text-gray-600">Sistema de Gestión Universitaria</p>
+          <p className="text-gray-600">Sistema de Gestión de Colegios</p>
         </div>
 
         {/* Login Form */}
@@ -138,7 +138,7 @@ export default function LoginPage({ onLogin, isLoading }: LoginPageProps) {
 
         {/* Footer */}
         <div className="text-center mt-8 text-sm text-gray-500">
-          © 2025 Base de Contactos - Sistema de Gestión Universitaria
+          © 2025 Base de Contactos - Sistema de Gestión de Colegios
         </div>
       </div>
     </div>
