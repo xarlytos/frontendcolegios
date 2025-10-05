@@ -308,7 +308,10 @@ export default function ExcelImportModal({ isOpen, onClose, onImport, existingCo
     const invalidContacts = mappedContacts.filter(contact => !contact.isValid);
     const validContacts = mappedContacts.filter(contact => contact.isValid);
     
-    console.log('✅ Contactos válidos:', validContacts.length);
+    // Guardar el número de contactos válidos para usar en el mensaje de éxito
+    const numeroContactosValidos = validContacts.length;
+    
+    console.log('✅ Contactos válidos:', numeroContactosValidos);
     console.log('❌ Contactos inválidos:', invalidContacts.length);
     
     // Mostrar detalles de contactos inválidos
@@ -366,8 +369,8 @@ export default function ExcelImportModal({ isOpen, onClose, onImport, existingCo
       console.log('📋 RESPUESTA COMPLETA DEL BACKEND:', response);
       
       // Mostrar mensaje de éxito
-      const contactosCreados = response.data?.data?.contactosCreados || 0;
-      alert(`Se importaron ${contactosCreados} contactos exitosamente.`);
+      // Usar el número de contactos válidos que se enviaron
+      alert(`Se importaron ${numeroContactosValidos} contactos exitosamente.`);
       
       // Llamar al callback para refrescar la lista
       onImport();
