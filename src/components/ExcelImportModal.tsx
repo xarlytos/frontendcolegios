@@ -68,10 +68,25 @@ export default function ExcelImportModal({ isOpen, onClose, onImport, existingCo
           setComercialesUsuarios(comercialesActivos);
           console.log('Comerciales activos:', comercialesActivos);
 
-          // Cargar colegios únicos de los contactos existentes
-          const colegiosUnicos = [...new Set(existingContacts.map(contact => contact.nombre_colegio))].sort();
-          setColegios(colegiosUnicos);
-          console.log('Colegios disponibles:', colegiosUnicos);
+          // Cargar colegios únicos desde la base de datos
+          try {
+            const colegiosResponse = await contactsService.getColegios();
+            if (colegiosResponse.success && colegiosResponse.data?.colegios) {
+              setColegios(colegiosResponse.data.colegios);
+              console.log('Colegios disponibles desde BD:', colegiosResponse.data.colegios);
+            } else {
+              // Fallback: usar colegios de contactos existentes
+              const colegiosUnicos = [...new Set(existingContacts.map(contact => contact.nombre_colegio))].sort();
+              setColegios(colegiosUnicos);
+              console.log('Colegios disponibles (fallback):', colegiosUnicos);
+            }
+          } catch (error) {
+            console.error('Error cargando colegios:', error);
+            // Fallback: usar colegios de contactos existentes
+            const colegiosUnicos = [...new Set(existingContacts.map(contact => contact.nombre_colegio))].sort();
+            setColegios(colegiosUnicos);
+            console.log('Colegios disponibles (fallback):', colegiosUnicos);
+          }
         } catch (error) {
           console.error('Error al cargar datos:', error);
         }

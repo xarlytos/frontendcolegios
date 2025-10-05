@@ -169,6 +169,16 @@ export class ContactsService {
     
     return apiService.get<ContactsResponse & { metadata: { comercialId: string; subordinados: string[]; comercialesIncluidos: string[] } }>(endpoint);
   }
+
+  async getColegios(): Promise<ApiResponse<{ colegios: string[] }>> {
+    try {
+      const response = await apiService.get<{ colegios: string[] }>('/contactos/colegios');
+      return response;
+    } catch (error) {
+      console.error('Error getting colegios:', error);
+      throw error;
+    }
+  }
 }
 
 export const contactsService = new ContactsService();

@@ -21,6 +21,9 @@ router.post('/', ContactosController.crearContacto);
 // Obtener TODOS los contactos sin filtros - Para administradores o usuarios con permiso VER_CONTACTOS
 router.get('/todos', requireAnyPermission(['VER_CONTACTOS']), ContactosController.getTodosLosContactos);
 
+// Obtener todos los colegios únicos
+router.get('/colegios', ContactosController.getColegios);
+
 // Obtener contactos de un comercial y sus subordinados
 router.get('/comercial/:comercialId', requireAnyPermission(['ver_contactos']), ContactosController.getContactosComercial);
 

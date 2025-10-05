@@ -664,4 +664,24 @@ export class ContactosController {
     }
   }
 
+  // GET /contactos/colegios - Obtener todos los colegios únicos
+  static async getColegios(req: AuthRequest, res: Response) {
+    try {
+      const colegios = await Contacto.distinct('nombreColegio');
+      
+      res.json({
+        success: true,
+        data: {
+          colegios: colegios.sort()
+        }
+      });
+    } catch (error) {
+      console.error('Error getting colegios:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Error interno del servidor'
+      });
+    }
+  }
+
 }
