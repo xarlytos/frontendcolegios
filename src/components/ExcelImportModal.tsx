@@ -40,6 +40,15 @@ const CONTACT_FIELDS = {
   comercial: 'Comercial'
 };
 
+// Función para normalizar texto (quitar acentos y convertir a minúsculas)
+const normalizeText = (text: string): string => {
+  return text
+    .toLowerCase()
+    .normalize('NFD') // Descompone caracteres acentuados
+    .replace(/[\u0300-\u036f]/g, '') // Elimina marcas diacríticas (acentos)
+    .trim();
+};
+
 export default function ExcelImportModal({ isOpen, onClose, onImport, existingContacts }: ExcelImportModalProps) {
   const { users, getAllUsers } = useAuth();
   const [step, setStep] = useState<'upload' | 'preview' | 'mapping' | 'validation'>('upload');
@@ -194,9 +203,9 @@ export default function ExcelImportModal({ isOpen, onClose, onImport, existingCo
             }
             case 'nombre_colegio': {
               const colegioValue = value?.toString().trim();
-              // Buscar colegio por nombre exacto
+              // Buscar colegio por nombre normalizado (sin acentos)
               const colegioEncontrado = colegios.find(c => 
-                c.toLowerCase() === colegioValue?.toLowerCase()
+                normalizeText(c) === normalizeText(colegioValue || '')
               );
               // Solo asignar si encuentra coincidencia, sino dejar vacío para forzar selección
               contactData[contactField] = colegioEncontrado || '';
@@ -204,9 +213,9 @@ export default function ExcelImportModal({ isOpen, onClose, onImport, existingCo
             }
             case 'comercial': {
               const comercialValue = value?.toString().trim();
-              // Buscar comercial por nombre exacto
+              // Buscar comercial por nombre normalizado (sin acentos)
               const comercialEncontrado = comerciales.find(c => 
-                c.nombre.toLowerCase() === comercialValue?.toLowerCase()
+                normalizeText(c.nombre) === normalizeText(comercialValue || '')
               );
               // Solo asignar si encuentra coincidencia, sino dejar vacío para selección manual
               contactData[contactField] = comercialEncontrado ? comercialEncontrado.nombre : '';
@@ -698,7 +707,7 @@ export default function ExcelImportModal({ isOpen, onClose, onImport, existingCo
                         {(() => {
                           const colegioValue = contact.data.nombre_colegio?.toString().trim();
                           const colegioEncontrado = colegios.find(c => 
-                            c.toLowerCase() === colegioValue?.toLowerCase()
+                            normalizeText(c) === normalizeText(colegioValue || '')
                           );
                           
                           if (colegioEncontrado) {
@@ -755,7 +764,7 @@ export default function ExcelImportModal({ isOpen, onClose, onImport, existingCo
                         {(() => {
                           const comercialValue = contact.data.comercial?.toString().trim();
                           const comercialEncontrado = comerciales.find(c => 
-                            c.nombre.toLowerCase() === comercialValue?.toLowerCase()
+                            normalizeText(c.nombre) === normalizeText(comercialValue || '')
                           );
                           
                           if (comercialEncontrado) {
