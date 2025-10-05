@@ -36,8 +36,8 @@ const CONTACT_FIELDS = {
   instagram: 'Instagram',
   nombre_colegio: 'Nombre del Colegio',
   año_nacimiento: 'Año de Nacimiento',
-  dia_libre: 'Día Libre',
-  comercial: 'Comercial'
+  comercial: 'Comercial',
+  email: 'Email',
 };
 
 export default function ExcelImportModal({ isOpen, onClose, onImport, existingContacts }: ExcelImportModalProps) {
@@ -59,10 +59,10 @@ export default function ExcelImportModal({ isOpen, onClose, onImport, existingCo
           // Cargar usuarios comerciales
           const usersResponse = await usersService.getUsers({ rol: 'COMERCIAL' });
           console.log('Datos de usuarios cargados:', usersResponse);
-          console.log('Usuarios obtenidos:', usersResponse.usuarios);
+          console.log('Usuarios obtenidos:', usersResponse.data?.usuarios);
           
           // Filtrar solo comerciales activos
-          const comercialesActivos = usersResponse.usuarios?.filter(user => 
+          const comercialesActivos = usersResponse.data?.usuarios?.filter((user: any) => 
             user.rol === 'COMERCIAL' && user.estado === 'ACTIVO'
           ) || [];
           setComercialesUsuarios(comercialesActivos);
@@ -187,7 +187,18 @@ export default function ExcelImportModal({ isOpen, onClose, onImport, existingCo
               contactData[contactField] = comercialEncontrado ? comercialEncontrado.nombre : comercialValue;
               // Guardar también el ID del comercial
               if (comercialEncontrado) {
-                (contactData as any).comercialId = comercialEncontrado._id;
+                (contactData as any).comercialId = comercialEncontrado.id;
+              }
+              break;
+            }
+            case 'email': {
+              const emailValue = value?.toString().trim();
+              // Validar formato de email básico
+              if (emailValue && !emailValue.includes('@')) {
+                // Si no tiene @, no es un email válido, pero lo guardamos como está
+                contactData[contactField] = emailValue;
+              } else {
+                contactData[contactField] = emailValue;
               }
               break;
             }
@@ -350,7 +361,9 @@ export default function ExcelImportModal({ isOpen, onClose, onImport, existingCo
         nombreColegio: contactData.nombre_colegio,
         anioNacimiento: contactData.año_nacimiento,
         diaLibre: contactData.dia_libre,
-        comercialId: contactData.comercialId || null
+        comercialId: contactData.comercialId || null,
+        email: contactData.email,
+        aportadoPor: contactData.aportado_por
       };
       
       // Log de depuración para ver los datos mapeados
@@ -368,30 +381,22 @@ export default function ExcelImportModal({ isOpen, onClose, onImport, existingCo
       console.log('✅ Importación exitosa:', response);
       
       // Mostrar detalles de la respuesta del backend
-      if (response.data && response.data.detalles) {
-        console.log('📋 DETALLES DE LA IMPORTACIÓN DESDE EL BACKEND:');
-        response.data.detalles.forEach((detalle: any, index: number) => {
-          if (detalle.error) {
-            console.log(`❌ Error en fila ${detalle.fila}:`, detalle.error);
-          } else {
-            console.log(`✅ Éxito en fila ${detalle.fila}:`, detalle.contacto);
-          }
-        });
-      }
+      console.log('📋 RESPUESTA COMPLETA DEL BACKEND:', response);
       
       // Mostrar mensaje de éxito
-      alert(`Se importaron ${response.data.contactosCreados} contactos exitosamente.`);
+      const contactosCreados = response.data?.data?.contactosCreados || 0;
+      alert(`Se importaron ${contactosCreados} contactos exitosamente.`);
       
       // Llamar al callback para refrescar la lista
       onImport();
       resetModal();
       onClose();
-    } catch (error) {
+    } catch (error: any) {
       console.error('💥 Error al importar contactos:', error);
       console.error('💥 Detalles del error:', {
-        message: error.message,
-        stack: error.stack,
-        response: error.response?.data
+        message: error?.message,
+        stack: error?.stack,
+        response: error?.response?.data
       });
       alert('Error al importar contactos. Por favor, inténtalo de nuevo.');
     } finally {
@@ -758,6 +763,30 @@ export default function ExcelImportModal({ isOpen, onClose, onImport, existingCo
                             );
                           }
                         })()} 
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 mb-1">
+                          Email
+                        </label>
+                        <input
+                          type="email"
+                          value={contact.data.email || ''}
+                          onChange={(e) => handleEditContact(index, 'email', e.target.value)}
+                          className="w-full text-sm border border-gray-300 rounded px-2 py-1"
+                          placeholder="ejemplo@email.com"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 mb-1">
+                          Aportado por
+                        </label>
+                        <input
+                          type="text"
+                          value={contact.data.aportado_por || ''}
+                          onChange={(e) => handleEditContact(index, 'aportado_por', e.target.value)}
+                          className="w-full text-sm border border-gray-300 rounded px-2 py-1"
+                          placeholder="Quien aportó el contacto"
+                        />
                       </div>
                     </div>
 
