@@ -36,8 +36,7 @@ const CONTACT_FIELDS = {
   instagram: 'Instagram',
   nombre_colegio: 'Nombre del Colegio',
   año_nacimiento: 'Año de Nacimiento',
-  comercial: 'Comercial',
-  email: 'Email',
+  comercial: 'Comercial'
 };
 
 export default function ExcelImportModal({ isOpen, onClose, onImport, existingContacts }: ExcelImportModalProps) {
@@ -158,26 +157,6 @@ export default function ExcelImportModal({ isOpen, onClose, onImport, existingCo
               contactData[contactField] = instagram;
               break;
             }
-            case 'dia_libre': {
-              const diaLibre = value?.toString().trim();
-              // Validar que sea un día válido
-              const diasValidos = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
-              if (diaLibre && diasValidos.includes(diaLibre)) {
-                contactData[contactField] = diaLibre;
-              } else if (diaLibre) {
-                // Intentar mapear variaciones comunes
-                const diaMapeado = diaLibre.toLowerCase();
-                if (diaMapeado.includes('lunes')) contactData[contactField] = 'Lunes';
-                else if (diaMapeado.includes('martes')) contactData[contactField] = 'Martes';
-                else if (diaMapeado.includes('miércoles') || diaMapeado.includes('miercoles')) contactData[contactField] = 'Miércoles';
-                else if (diaMapeado.includes('jueves')) contactData[contactField] = 'Jueves';
-                else if (diaMapeado.includes('viernes')) contactData[contactField] = 'Viernes';
-                else if (diaMapeado.includes('sábado') || diaMapeado.includes('sabado')) contactData[contactField] = 'Sábado';
-                else if (diaMapeado.includes('domingo')) contactData[contactField] = 'Domingo';
-                else contactData[contactField] = diaLibre; // Mantener el valor original si no se puede mapear
-              }
-              break;
-            }
             case 'comercial': {
               const comercialValue = value?.toString().trim();
               // Buscar comercial por nombre exacto
@@ -188,17 +167,6 @@ export default function ExcelImportModal({ isOpen, onClose, onImport, existingCo
               // Guardar también el ID del comercial
               if (comercialEncontrado) {
                 (contactData as any).comercialId = comercialEncontrado.id;
-              }
-              break;
-            }
-            case 'email': {
-              const emailValue = value?.toString().trim();
-              // Validar formato de email básico
-              if (emailValue && !emailValue.includes('@')) {
-                // Si no tiene @, no es un email válido, pero lo guardamos como está
-                contactData[contactField] = emailValue;
-              } else {
-                contactData[contactField] = emailValue;
               }
               break;
             }
@@ -360,10 +328,7 @@ export default function ExcelImportModal({ isOpen, onClose, onImport, existingCo
         instagram: contactData.instagram,
         nombreColegio: contactData.nombre_colegio,
         anioNacimiento: contactData.año_nacimiento,
-        diaLibre: contactData.dia_libre,
-        comercialId: contactData.comercialId || null,
-        email: contactData.email,
-        aportadoPor: contactData.aportado_por
+        comercialId: contactData.comercialId || null
       };
       
       // Log de depuración para ver los datos mapeados
@@ -692,25 +657,6 @@ export default function ExcelImportModal({ isOpen, onClose, onImport, existingCo
                       </div>
                       <div>
                         <label className="block text-xs font-medium text-gray-700 mb-1">
-                          Día Libre
-                        </label>
-                        <select
-                          value={contact.data.dia_libre || ''}
-                          onChange={(e) => handleEditContact(index, 'dia_libre', e.target.value)}
-                          className="w-full text-sm border border-gray-300 rounded px-2 py-1 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        >
-                          <option value="">-- Seleccionar Día --</option>
-                          <option value="Lunes">Lunes</option>
-                          <option value="Martes">Martes</option>
-                          <option value="Miércoles">Miércoles</option>
-                          <option value="Jueves">Jueves</option>
-                          <option value="Viernes">Viernes</option>
-                          <option value="Sábado">Sábado</option>
-                          <option value="Domingo">Domingo</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label className="block text-xs font-medium text-gray-700 mb-1">
                           Año de Nacimiento
                         </label>
                         <input
@@ -763,30 +709,6 @@ export default function ExcelImportModal({ isOpen, onClose, onImport, existingCo
                             );
                           }
                         })()} 
-                      </div>
-                      <div>
-                        <label className="block text-xs font-medium text-gray-700 mb-1">
-                          Email
-                        </label>
-                        <input
-                          type="email"
-                          value={contact.data.email || ''}
-                          onChange={(e) => handleEditContact(index, 'email', e.target.value)}
-                          className="w-full text-sm border border-gray-300 rounded px-2 py-1"
-                          placeholder="ejemplo@email.com"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-medium text-gray-700 mb-1">
-                          Aportado por
-                        </label>
-                        <input
-                          type="text"
-                          value={contact.data.aportado_por || ''}
-                          onChange={(e) => handleEditContact(index, 'aportado_por', e.target.value)}
-                          className="w-full text-sm border border-gray-300 rounded px-2 py-1"
-                          placeholder="Quien aportó el contacto"
-                        />
                       </div>
                     </div>
 
