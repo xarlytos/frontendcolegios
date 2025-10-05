@@ -2,6 +2,7 @@ import { Response } from 'express';
 import { Contacto } from '../models/Contacto';
 import { JerarquiaUsuarios } from '../models/JerarquiaUsuarios'; // RESTAURADO
 import { RolUsuario } from '../models/Usuario';
+import { Colegio } from '../models/Colegio';
 import { AuthRequest } from '../types';
 import { AuditLog, AccionAudit, EntidadAudit } from '../models/AuditLog';
 import { Permiso } from '../models/Permiso';
@@ -667,12 +668,28 @@ export class ContactosController {
   // GET /contactos/colegios - Obtener todos los colegios únicos
   static async getColegios(req: AuthRequest, res: Response) {
     try {
-      const colegios = await Contacto.distinct('nombreColegio');
+      // Primero intentar obtener de la tabla de colegios
+      const colegiosFromTable = await Colegio.find({ activo: true }).select('nombre').lean();
+      
+      if (colegiosFromTable.length > 0) {
+        const nombresColegios = colegiosFromTable.map(colegio => colegio.nombre);
+        res.json({
+          success: true,
+          data: {
+            colegios: nombresColegios.sort()
+          }
+        });
+        return;
+      }
+      
+      // Si no hay colegios en la tabla, obtener de contactos como fallback
+      const colegiosFromContacts = await Contacto.distinct('nombreColegio');
+      const colegiosLista = colegiosFromContacts.filter(colegio => colegio && colegio.trim() !== '');
       
       res.json({
         success: true,
         data: {
-          colegios: colegios.sort()
+          colegios: colegiosLista.sort()
         }
       });
     } catch (error) {

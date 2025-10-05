@@ -61,11 +61,13 @@ export default function ExcelImportModal({ isOpen, onClose, onImport, existingCo
           const usersResponse = await usersService.getUsers({ rol: 'COMERCIAL' });
           console.log('📋 Respuesta completa de usuarios:', usersResponse);
           console.log('👥 Usuarios obtenidos:', usersResponse.data?.usuarios);
+          console.log('🔍 Estructura completa de la respuesta:', JSON.stringify(usersResponse, null, 2));
           
           // Filtrar solo comerciales activos
           const comercialesActivos = usersResponse.data?.usuarios?.filter((user: any) => 
             user.rol === 'COMERCIAL' && user.estado === 'ACTIVO'
           ) || [];
+          
           setComercialesUsuarios(comercialesActivos);
           console.log('✅ Comerciales activos cargados:', comercialesActivos);
           console.log('📊 Estado de comerciales actualizado, cantidad:', comercialesActivos.length);
@@ -75,25 +77,21 @@ export default function ExcelImportModal({ isOpen, onClose, onImport, existingCo
           try {
             const colegiosResponse = await contactsService.getColegios();
             console.log('📋 Respuesta completa de colegios:', colegiosResponse);
+          console.log('🔍 Estructura completa de la respuesta de colegios:', JSON.stringify(colegiosResponse, null, 2));
             
-            if (colegiosResponse.success && colegiosResponse.data?.colegios) {
+            if (colegiosResponse.success && colegiosResponse.data?.colegios && colegiosResponse.data.colegios.length > 0) {
               setColegios(colegiosResponse.data.colegios);
               console.log('✅ Colegios cargados desde BD:', colegiosResponse.data.colegios);
               console.log('📊 Estado de colegios actualizado, cantidad:', colegiosResponse.data.colegios.length);
             } else {
-              console.log('⚠️ Respuesta de colegios no válida, usando fallback');
-              // Fallback: usar colegios de contactos existentes
-              const colegiosUnicos = [...new Set(existingContacts.map(contact => contact.nombre_colegio))].sort();
-              setColegios(colegiosUnicos);
-              console.log('📋 Colegios disponibles (fallback):', colegiosUnicos);
-              console.log('📊 Estado de colegios actualizado (fallback), cantidad:', colegiosUnicos.length);
+              console.log('⚠️ No hay colegios en BD');
+              setColegios([]);
+              console.log('📊 Estado de colegios actualizado, cantidad: 0');
             }
           } catch (error) {
             console.error('💥 Error cargando colegios:', error);
-            // Fallback: usar colegios de contactos existentes
-            const colegiosUnicos = [...new Set(existingContacts.map(contact => contact.nombre_colegio))].sort();
-            setColegios(colegiosUnicos);
-            console.log('📋 Colegios disponibles (fallback):', colegiosUnicos);
+            setColegios([]);
+            console.log('📊 Estado de colegios actualizado (error), cantidad: 0');
           }
         } catch (error) {
           console.error('Error al cargar datos:', error);
