@@ -4,6 +4,7 @@ import { Contact } from '../types';
 import { User } from '../types/auth';
 import { usersService } from '../services/usersService';
 import { contactsService } from '../services/contactsService';
+import universidadesService from '../services/universidadesService';
 import * as XLSX from 'xlsx';
 
 interface ExcelImportModalProps {
@@ -65,29 +66,28 @@ export default function ExcelImportModal({ isOpen, onClose, onImport, existingCo
           
           // Filtrar solo comerciales activos
           const comercialesActivos = usersResponse.data?.usuarios?.filter((user: any) => 
-            user.rol === 'COMERCIAL' && user.estado === 'ACTIVO'
+            user.rol === 'COMERCIAL' && user.activo === true
           ) || [];
           
           setComercialesUsuarios(comercialesActivos);
           console.log('✅ Comerciales activos cargados:', comercialesActivos);
           console.log('📊 Estado de comerciales actualizado, cantidad:', comercialesActivos.length);
 
-          // Cargar colegios únicos desde la base de datos
+          // Cargar colegios desde la base de datos usando universidadesService
           console.log('🔍 Intentando cargar colegios desde BD...');
           try {
-            const colegiosResponse = await contactsService.getColegios();
-            console.log('📋 Respuesta completa de colegios:', colegiosResponse);
-          console.log('🔍 Estructura completa de la respuesta de colegios:', JSON.stringify(colegiosResponse, null, 2));
+            const universidades = await universidadesService.getUniversidades();
+            console.log('📋 Universidades obtenidas:', universidades);
             
-            if (colegiosResponse.success && colegiosResponse.data?.colegios && colegiosResponse.data.colegios.length > 0) {
-              setColegios(colegiosResponse.data.colegios);
-              console.log('✅ Colegios cargados desde BD:', colegiosResponse.data.colegios);
-              console.log('📊 Estado de colegios actualizado, cantidad:', colegiosResponse.data.colegios.length);
-            } else {
-              console.log('⚠️ No hay colegios en BD');
-              setColegios([]);
-              console.log('📊 Estado de colegios actualizado, cantidad: 0');
-            }
+            // Filtrar solo colegios activos y extraer nombres
+            const activeColegios = universidades
+              .filter(uni => uni.activa !== false)
+              .map(uni => uni.nombre)
+              .sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
+            
+            setColegios(activeColegios);
+            console.log('✅ Colegios cargados desde BD:', activeColegios);
+            console.log('📊 Estado de colegios actualizado, cantidad:', activeColegios.length);
           } catch (error) {
             console.error('💥 Error cargando colegios:', error);
             setColegios([]);
