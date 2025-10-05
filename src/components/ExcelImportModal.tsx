@@ -169,7 +169,8 @@ export default function ExcelImportModal({ isOpen, onClose, onImport, existingCo
               const colegioEncontrado = colegios.find(c => 
                 c.toLowerCase() === colegioValue?.toLowerCase()
               );
-              contactData[contactField] = colegioEncontrado || colegioValue;
+              // Solo asignar si encuentra coincidencia, sino dejar vacío para forzar selección
+              contactData[contactField] = colegioEncontrado || '';
               break;
             }
             case 'comercial': {
@@ -178,7 +179,8 @@ export default function ExcelImportModal({ isOpen, onClose, onImport, existingCo
               const comercialEncontrado = comerciales.find(c => 
                 c.nombre.toLowerCase() === comercialValue?.toLowerCase()
               );
-              contactData[contactField] = comercialEncontrado ? comercialEncontrado.nombre : comercialValue;
+              // Solo asignar si encuentra coincidencia, sino dejar vacío para selección manual
+              contactData[contactField] = comercialEncontrado ? comercialEncontrado.nombre : '';
               // Guardar también el ID del comercial
               if (comercialEncontrado) {
                 (contactData as any).comercialId = comercialEncontrado.id;
