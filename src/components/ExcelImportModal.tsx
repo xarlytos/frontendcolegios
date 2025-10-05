@@ -58,78 +58,42 @@ export default function ExcelImportModal({ isOpen, onClose, onImport, existingCo
         try {
           // Cargar usuarios comerciales
           console.log('🔍 Intentando cargar comerciales...');
-          try {
-            const usersResponse = await usersService.getUsers({ rol: 'COMERCIAL' });
-            console.log('📋 Respuesta completa de usuarios:', usersResponse);
-            console.log('👥 Usuarios obtenidos:', usersResponse.data?.usuarios);
-            
-            // Filtrar solo comerciales activos
-            const comercialesActivos = usersResponse.data?.usuarios?.filter((user: any) => 
-              user.rol === 'COMERCIAL' && user.estado === 'ACTIVO'
-            ) || [];
-            setComercialesUsuarios(comercialesActivos);
-            console.log('✅ Comerciales activos cargados:', comercialesActivos);
-          } catch (error) {
-            console.error('💥 Error cargando comerciales:', error);
-            // Datos de prueba para comerciales
-            const comercialesPrueba = [
-              { 
-                id: '1', 
-                nombre: 'Juan Pérez', 
-                email: 'juan@test.com',
-                role: 'comercial' as const, 
-                activo: true,
-                fecha_creacion: new Date().toISOString()
-              },
-              { 
-                id: '2', 
-                nombre: 'María García', 
-                email: 'maria@test.com',
-                role: 'comercial' as const, 
-                activo: true,
-                fecha_creacion: new Date().toISOString()
-              },
-              { 
-                id: '3', 
-                nombre: 'Carlos López', 
-                email: 'carlos@test.com',
-                role: 'comercial' as const, 
-                activo: true,
-                fecha_creacion: new Date().toISOString()
-              }
-            ];
-            setComercialesUsuarios(comercialesPrueba);
-            console.log('📋 Usando comerciales de prueba:', comercialesPrueba);
-          }
+          const usersResponse = await usersService.getUsers({ rol: 'COMERCIAL' });
+          console.log('📋 Respuesta completa de usuarios:', usersResponse);
+          console.log('👥 Usuarios obtenidos:', usersResponse.data?.usuarios);
+          
+          // Filtrar solo comerciales activos
+          const comercialesActivos = usersResponse.data?.usuarios?.filter((user: any) => 
+            user.rol === 'COMERCIAL' && user.estado === 'ACTIVO'
+          ) || [];
+          setComercialesUsuarios(comercialesActivos);
+          console.log('✅ Comerciales activos cargados:', comercialesActivos);
+          console.log('📊 Estado de comerciales actualizado, cantidad:', comercialesActivos.length);
 
           // Cargar colegios únicos desde la base de datos
+          console.log('🔍 Intentando cargar colegios desde BD...');
           try {
-            console.log('🔍 Intentando cargar colegios desde BD...');
             const colegiosResponse = await contactsService.getColegios();
             console.log('📋 Respuesta completa de colegios:', colegiosResponse);
             
             if (colegiosResponse.success && colegiosResponse.data?.colegios) {
               setColegios(colegiosResponse.data.colegios);
               console.log('✅ Colegios cargados desde BD:', colegiosResponse.data.colegios);
+              console.log('📊 Estado de colegios actualizado, cantidad:', colegiosResponse.data.colegios.length);
             } else {
               console.log('⚠️ Respuesta de colegios no válida, usando fallback');
               // Fallback: usar colegios de contactos existentes
               const colegiosUnicos = [...new Set(existingContacts.map(contact => contact.nombre_colegio))].sort();
               setColegios(colegiosUnicos);
               console.log('📋 Colegios disponibles (fallback):', colegiosUnicos);
+              console.log('📊 Estado de colegios actualizado (fallback), cantidad:', colegiosUnicos.length);
             }
           } catch (error) {
             console.error('💥 Error cargando colegios:', error);
-            // Datos de prueba para colegios
-            const colegiosPrueba = [
-              'CENTRE PRIVAT SAGRA',
-              'La Salle Paterna',
-              'Colegio San José',
-              'Instituto Tecnológico',
-              'Escuela Primaria Central'
-            ];
-            setColegios(colegiosPrueba);
-            console.log('📋 Usando colegios de prueba:', colegiosPrueba);
+            // Fallback: usar colegios de contactos existentes
+            const colegiosUnicos = [...new Set(existingContacts.map(contact => contact.nombre_colegio))].sort();
+            setColegios(colegiosUnicos);
+            console.log('📋 Colegios disponibles (fallback):', colegiosUnicos);
           }
         } catch (error) {
           console.error('Error al cargar datos:', error);
@@ -138,6 +102,15 @@ export default function ExcelImportModal({ isOpen, onClose, onImport, existingCo
       loadData();
     }
   }, [isOpen]);
+
+  // Monitorear cambios en los estados
+  useEffect(() => {
+    console.log('📊 Estado de comerciales actualizado:', comerciales.length, comerciales);
+  }, [comerciales]);
+
+  useEffect(() => {
+    console.log('📊 Estado de colegios actualizado:', colegios.length, colegios);
+  }, [colegios]);
 
   const resetModal = () => {
     setStep('upload');
