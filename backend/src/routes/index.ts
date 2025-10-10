@@ -8,6 +8,7 @@ import universidadesRoutes from './universidadesRoutes';
 import titulacionesRoutes from './titulacionesRoutes';
 import graduacionesRoutes from './graduacionesRoutes';
 import configuracionRoutes from './configuracionRoutes';
+import colegiosRoutes from './colegiosRoutes';
 
 const router = Router();
 
@@ -21,6 +22,7 @@ router.use('/universidades', universidadesRoutes);
 router.use('/titulaciones', titulacionesRoutes);
 router.use('/graduaciones', graduacionesRoutes);
 router.use('/configuracion', configuracionRoutes);
+router.use('/colegios', colegiosRoutes);
 
 // Ruta de health check
 router.get('/health', (req, res) => {

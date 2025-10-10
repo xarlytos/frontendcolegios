@@ -668,16 +668,22 @@ export class ContactosController {
   // GET /contactos/colegios - Obtener todos los colegios únicos
   static async getColegios(req: AuthRequest, res: Response) {
     try {
-      // Obtener colegios únicos de la tabla de contactos (donde están los datos reales)
-      const colegiosFromContacts = await Contacto.distinct('nombreColegio');
-      const colegiosLista = colegiosFromContacts.filter(colegio => colegio && colegio.trim() !== '');
+      // Importar el modelo Universidad
+      const { Universidad } = await import('../models/Universidad');
       
-      console.log('🔍 Colegios encontrados en contactos:', colegiosLista);
+      // Obtener colegios desde la tabla de universidades (donde ahora están los colegios)
+      const colegios = await Universidad.find({ activa: true })
+        .select('nombre')
+        .sort({ nombre: 1 });
+      
+      const colegiosLista = colegios.map(colegio => colegio.nombre);
+      
+      console.log('🔍 Colegios encontrados en tabla universidades:', colegiosLista.length);
       
       res.json({
         success: true,
         data: {
-          colegios: colegiosLista.sort()
+          colegios: colegiosLista
         }
       });
     } catch (error) {
