@@ -474,7 +474,7 @@ export default function CountPage({ onNavigateToContacts, currentUser }: CountPa
                 {filteredColegios.map((cole, index) => (
                   <div
                     key={index}
-                    className="px-3 py-2 hover:bg-blue-100 cursor-pointer text-sm text-blue-900"
+                    className="px-3 py-2 hover:bg-blue-100 cursor-pointer text-sm text-gray-900"
                     onMouseDown={() => handleColegioSelect(cole)}
                   >
                     {cole}
@@ -645,15 +645,15 @@ export default function CountPage({ onNavigateToContacts, currentUser }: CountPa
                 {Object.values(localidadData.colegios).map(colegioData => (
                   <div key={colegioData.colegio} className="bg-white rounded-lg overflow-hidden border border-gray-200">
                     {/* Encabezado del colegio */}
-                    <div className="bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between">
+                    <div className="bg-gradient-to-r from-blue-400 to-blue-500 px-4 py-3 flex items-center justify-between">
                       <div>
-                        <h4 className="text-gray-900 text-lg font-semibold">
+                        <h4 className="text-white text-lg font-semibold">
                           {colegioData.colegio}
-                          <span className="ml-2 text-sm font-normal text-gray-600">
+                          <span className="ml-2 text-sm font-normal text-blue-100">
                             ({colegioData.tipo === 'publica' ? 'Público' : 'Privado'})
                           </span>
                         </h4>
-                        <p className="text-gray-600 text-sm">Total contactos: {colegioData.total}</p>
+                        <p className="text-blue-50 text-sm">Total contactos: {colegioData.total}</p>
                       </div>
                       <button
                         onClick={() => onNavigateToContacts({ nombre_colegio: colegioData.colegio })}
