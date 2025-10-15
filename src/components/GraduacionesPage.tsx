@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Building, Users, Search, Calendar, X, BarChart3, Eye, Edit3, Save, X as XIcon } from 'lucide-react';
 import graduacionesService, { Graduacion, Contacto } from '../services/graduacionesService';
 import configuracionService from '../services/configuracionService';
-import { usersService, User } from '../services/usersService';
+import { useAuth } from '../hooks/useAuth';
 import ContactosModal from './ContactosModal';
 
 interface GraduacionesPageProps {
@@ -10,6 +10,7 @@ interface GraduacionesPageProps {
 }
 
 export default function GraduacionesPage({ currentUser }: GraduacionesPageProps) {
+  const { users, getAllUsers } = useAuth();
   const [graduaciones, setGraduaciones] = useState<Graduacion[]>([]);
   const [aniosDisponibles, setAniosDisponibles] = useState<number[]>([]);
   const [selectedAnio, setSelectedAnio] = useState<number | null>(null);
@@ -21,7 +22,6 @@ export default function GraduacionesPage({ currentUser }: GraduacionesPageProps)
   const [filtroEstado, setFiltroEstado] = useState('');
   const [totalContactos, setTotalContactos] = useState(0);
   const [mostrarContactos, setMostrarContactos] = useState(false);
-  const [usuarios, setUsuarios] = useState<User[]>([]);
   const [loadingUsuarios, setLoadingUsuarios] = useState(false);
   
   // Estados para modal de contactos
@@ -218,13 +218,8 @@ export default function GraduacionesPage({ currentUser }: GraduacionesPageProps)
     try {
       setLoadingUsuarios(true);
       console.log('👥 Cargando usuarios para desplegable de responsables...');
-      const response = await usersService.getAllUsers();
-      if (response.success) {
-        setUsuarios(response.data.usuarios);
-        console.log('✅ Usuarios cargados:', response.data.usuarios.length);
-      } else {
-        console.error('❌ Error cargando usuarios:', response);
-      }
+      await getAllUsers();
+      console.log('✅ Usuarios cargados:', users.length);
     } catch (err) {
       console.error('❌ Error loading usuarios:', err);
     } finally {
@@ -789,7 +784,7 @@ export default function GraduacionesPage({ currentUser }: GraduacionesPageProps)
                               {loadingUsuarios ? (
                                 <option disabled>Cargando usuarios...</option>
                               ) : (
-                                usuarios.map((usuario) => (
+                                users.map((usuario) => (
                                   <option key={usuario.id} value={usuario.nombre}>
                                     {usuario.nombre} ({usuario.role})
                                   </option>
@@ -830,7 +825,15 @@ export default function GraduacionesPage({ currentUser }: GraduacionesPageProps)
                             <select
                               value={graduacion.prevision || ''}
                               onChange={(e) => guardarCampo(graduacion.id, 'prevision', e.target.value)}
-                              className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white hover:bg-gray-50"
+                              className={`w-full px-2 py-1 text-sm border rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent hover:bg-gray-50 ${
+                                graduacion.prevision === 'Buena' 
+                                  ? 'border-green-300 bg-green-50 text-green-800' 
+                                  : graduacion.prevision === 'Regular' 
+                                  ? 'border-yellow-300 bg-yellow-50 text-yellow-800' 
+                                  : graduacion.prevision === 'Mala' 
+                                  ? 'border-red-300 bg-red-50 text-red-800' 
+                                  : 'border-gray-300 bg-white'
+                              }`}
                               disabled={savingId === graduacion.id}
                             >
                               <option value="">Seleccionar previsión</option>
