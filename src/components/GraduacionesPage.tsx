@@ -933,41 +933,32 @@ export default function GraduacionesPage({ currentUser }: GraduacionesPageProps)
                         {/* Tipo Producto */}
                         <td className="px-6 py-4 whitespace-nowrap border-r border-gray-200">
                           <div className="relative">
-                            <div className="flex gap-1">
-                              <select
-                                value={graduacion.tipoProducto || ''}
-                                onChange={(e) => {
-                                  // Actualizar el estado local inmediatamente
-                                  setGraduaciones(prev => prev.map(g => 
-                                    g.id === graduacion.id 
-                                      ? { ...g, tipoProducto: e.target.value }
-                                      : g
-                                  ));
-                                  // Guardar inmediatamente
-                                  guardarCampo(graduacion.id, 'tipoProducto', e.target.value);
-                                }}
-                                className="flex-1 px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white hover:bg-gray-50"
-                                disabled={savingId === graduacion.id}
-                              >
-                                <option value="">Seleccionar producto</option>
-                                {loadingProductos ? (
-                                  <option disabled>Cargando productos...</option>
-                                ) : (
-                                  productos.map((producto) => (
-                                    <option key={producto._id} value={producto.nombre}>
-                                      {producto.nombre}
-                                    </option>
-                                  ))
-                                )}
-                              </select>
-                              <button
-                                onClick={abrirModalProductos}
-                                className="flex items-center px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded hover:bg-blue-200 transition-colors"
-                                title="Gestionar productos"
-                              >
-                                <Plus className="w-3 h-3" />
-                              </button>
-                            </div>
+                            <select
+                              value={graduacion.tipoProducto || ''}
+                              onChange={(e) => {
+                                // Actualizar el estado local inmediatamente
+                                setGraduaciones(prev => prev.map(g => 
+                                  g.id === graduacion.id 
+                                    ? { ...g, tipoProducto: e.target.value }
+                                    : g
+                                ));
+                                // Guardar inmediatamente
+                                guardarCampo(graduacion.id, 'tipoProducto', e.target.value);
+                              }}
+                              className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white hover:bg-gray-50"
+                              disabled={savingId === graduacion.id}
+                            >
+                              <option value="">Seleccionar producto</option>
+                              {loadingProductos ? (
+                                <option disabled>Cargando productos...</option>
+                              ) : (
+                                productos.map((producto) => (
+                                  <option key={producto._id} value={producto.nombre}>
+                                    {producto.nombre}
+                                  </option>
+                                ))
+                              )}
+                            </select>
                             {savingId === graduacion.id && (
                               <div className="absolute right-2 top-1/2 transform -translate-y-1/2">
                                 <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600"></div>
@@ -1086,6 +1077,10 @@ export default function GraduacionesPage({ currentUser }: GraduacionesPageProps)
         onProductoSeleccionado={(producto) => {
           // Recargar productos después de seleccionar uno
           recargarProductos();
+        }}
+        onProductoCreado={(producto) => {
+          // Actualizar la lista de productos inmediatamente cuando se crea uno
+          setProductos(prev => [...prev, producto]);
         }}
       />
     </div>

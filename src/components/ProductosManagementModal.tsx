@@ -6,12 +6,14 @@ interface ProductosManagementModalProps {
   isOpen: boolean;
   onClose: () => void;
   onProductoSeleccionado?: (producto: Producto) => void;
+  onProductoCreado?: (producto: Producto) => void;
 }
 
 export default function ProductosManagementModal({ 
   isOpen, 
   onClose, 
-  onProductoSeleccionado 
+  onProductoSeleccionado,
+  onProductoCreado
 }: ProductosManagementModalProps) {
   const [productos, setProductos] = useState<Producto[]>([]);
   const [loading, setLoading] = useState(false);
@@ -63,6 +65,11 @@ export default function ProductosManagementModal({
 
       setProductos(prev => [...prev, response.producto]);
       setNombre('');
+      
+      // Notificar al componente padre que se creó un producto
+      if (onProductoCreado) {
+        onProductoCreado(response.producto);
+      }
     } catch (error: any) {
       console.error('Error creando producto:', error);
       setError(error.response?.data?.message || 'Error al crear el producto');
