@@ -35,21 +35,8 @@ export default function GraduacionesPage({ currentUser }: GraduacionesPageProps)
     nombreColegio: ''
   });
   
-  // Estados para edición
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editData, setEditData] = useState<{
-    responsable: string;
-    tipoProducto: string;
-    prevision: string;
-    estado: string;
-    observaciones: string;
-  }>({
-    responsable: '',
-    tipoProducto: '',
-    prevision: '',
-    estado: '',
-    observaciones: ''
-  });
+  // Estados para guardado automático
+  const [savingId, setSavingId] = useState<string | null>(null);
 
   const isAdmin = currentUser?.role?.toLowerCase() === 'admin';
 
@@ -404,49 +391,32 @@ export default function GraduacionesPage({ currentUser }: GraduacionesPageProps)
     });
   };
 
-  // Función para iniciar edición
-  const iniciarEdicion = (graduacion: Graduacion) => {
-    setEditingId(graduacion.id);
-    setEditData({
-      responsable: graduacion.responsable || '',
-      tipoProducto: graduacion.tipoProducto || '',
-      prevision: graduacion.prevision || '',
-      estado: graduacion.estado || '',
-      observaciones: graduacion.observaciones || ''
-    });
-  };
-
-  // Función para cancelar edición
-  const cancelarEdicion = () => {
-    setEditingId(null);
-    setEditData({
-      responsable: '',
-      tipoProducto: '',
-      prevision: '',
-      estado: '',
-      observaciones: ''
-    });
-  };
-
-  // Función para guardar cambios
-  const guardarCambios = async (id: string) => {
+  // Función para guardar cambios automáticamente
+  const guardarCampo = async (id: string, campo: string, valor: string) => {
     try {
-      const response = await graduacionesService.actualizarGraduacion(id, editData);
+      setSavingId(id);
+      console.log(`💾 Guardando ${campo} para graduación ${id}:`, valor);
+      
+      const updateData = { [campo]: valor };
+      const response = await graduacionesService.actualizarGraduacion(id, updateData);
+      
       if (response.success) {
         // Actualizar la graduación en el estado local
         setGraduaciones(prev => prev.map(g => 
           g.id === id 
-            ? { ...g, ...response.graduacion }
+            ? { ...g, [campo]: valor }
             : g
         ));
-        setEditingId(null);
-        alert('✅ Graduación actualizada correctamente');
+        console.log('✅ Campo guardado correctamente');
       } else {
-        alert('❌ Error al actualizar la graduación');
+        console.error('❌ Error guardando campo:', response);
+        alert('❌ Error al guardar el campo');
       }
     } catch (error) {
-      console.error('Error actualizando graduación:', error);
-      alert('❌ Error al actualizar la graduación');
+      console.error('❌ Error guardando campo:', error);
+      alert('❌ Error al guardar el campo');
+    } finally {
+      setSavingId(null);
     }
   };
 
@@ -775,11 +745,8 @@ export default function GraduacionesPage({ currentUser }: GraduacionesPageProps)
                       <th className="px-6 py-4 text-left text-sm font-semibold text-blue-900 border-r border-blue-200">
                         Estado
                       </th>
-                      <th className="px-6 py-4 text-left text-sm font-semibold text-blue-900 border-r border-blue-200">
-                        Observaciones
-                      </th>
                       <th className="px-6 py-4 text-left text-sm font-semibold text-blue-900">
-                        Acciones
+                        Observaciones
                       </th>
                     </tr>
                   </thead>
@@ -811,12 +778,12 @@ export default function GraduacionesPage({ currentUser }: GraduacionesPageProps)
                         
                         {/* Responsable */}
                         <td className="px-6 py-4 whitespace-nowrap border-r border-gray-200">
-                          {editingId === graduacion.id ? (
+                          <div className="relative">
                             <select
-                              value={editData.responsable}
-                              onChange={(e) => setEditData(prev => ({ ...prev, responsable: e.target.value }))}
-                              className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                              disabled={loadingUsuarios}
+                              value={graduacion.responsable || ''}
+                              onChange={(e) => guardarCampo(graduacion.id, 'responsable', e.target.value)}
+                              className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white hover:bg-gray-50"
+                              disabled={loadingUsuarios || savingId === graduacion.id}
                             >
                               <option value="">Seleccionar responsable</option>
                               {loadingUsuarios ? (
@@ -829,76 +796,64 @@ export default function GraduacionesPage({ currentUser }: GraduacionesPageProps)
                                 ))
                               )}
                             </select>
-                          ) : (
-                            <div className="text-sm text-gray-900">
-                              {graduacion.responsable ? (
-                                <div>
-                                  <div className="font-medium">{graduacion.responsable}</div>
-                                  {usuarios.find(u => u.nombre === graduacion.responsable) && (
-                                    <div className="text-xs text-gray-500">
-                                      {usuarios.find(u => u.nombre === graduacion.responsable)?.role}
-                                    </div>
-                                  )}
-                                </div>
-                              ) : (
-                                <span className="text-gray-500 italic">Sin asignar</span>
-                              )}
-                            </div>
-                          )}
+                            {savingId === graduacion.id && (
+                              <div className="absolute right-2 top-1/2 transform -translate-y-1/2">
+                                <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600"></div>
+                              </div>
+                            )}
+                          </div>
                         </td>
                         
                         {/* Tipo Producto */}
                         <td className="px-6 py-4 whitespace-nowrap border-r border-gray-200">
-                          {editingId === graduacion.id ? (
+                          <div className="relative">
                             <input
                               type="text"
-                              value={editData.tipoProducto}
-                              onChange={(e) => setEditData(prev => ({ ...prev, tipoProducto: e.target.value }))}
-                              className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                              value={graduacion.tipoProducto || ''}
+                              onChange={(e) => guardarCampo(graduacion.id, 'tipoProducto', e.target.value)}
+                              onBlur={(e) => guardarCampo(graduacion.id, 'tipoProducto', e.target.value)}
+                              className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white hover:bg-gray-50"
                               placeholder="Tipo de producto"
+                              disabled={savingId === graduacion.id}
                             />
-                          ) : (
-                            <div className="text-sm text-gray-900">
-                              {graduacion.tipoProducto || 'Sin especificar'}
-                            </div>
-                          )}
+                            {savingId === graduacion.id && (
+                              <div className="absolute right-2 top-1/2 transform -translate-y-1/2">
+                                <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600"></div>
+                              </div>
+                            )}
+                          </div>
                         </td>
                         
                         {/* Previsión */}
                         <td className="px-6 py-4 whitespace-nowrap border-r border-gray-200">
-                          {editingId === graduacion.id ? (
+                          <div className="relative">
                             <select
-                              value={editData.prevision}
-                              onChange={(e) => setEditData(prev => ({ ...prev, prevision: e.target.value }))}
-                              className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                              value={graduacion.prevision || ''}
+                              onChange={(e) => guardarCampo(graduacion.id, 'prevision', e.target.value)}
+                              className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white hover:bg-gray-50"
+                              disabled={savingId === graduacion.id}
                             >
                               <option value="">Seleccionar previsión</option>
                               <option value="Buena">Buena</option>
                               <option value="Regular">Regular</option>
                               <option value="Mala">Mala</option>
                             </select>
-                          ) : (
-                            <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                              graduacion.prevision === 'Buena' 
-                                ? 'bg-green-100 text-green-800' 
-                                : graduacion.prevision === 'Regular' 
-                                ? 'bg-yellow-100 text-yellow-800' 
-                                : graduacion.prevision === 'Mala' 
-                                ? 'bg-red-100 text-red-800' 
-                                : 'bg-gray-100 text-gray-800'
-                            }`}>
-                              {graduacion.prevision || 'Sin especificar'}
-                            </span>
-                          )}
+                            {savingId === graduacion.id && (
+                              <div className="absolute right-2 top-1/2 transform -translate-y-1/2">
+                                <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600"></div>
+                              </div>
+                            )}
+                          </div>
                         </td>
                         
                         {/* Estado */}
                         <td className="px-6 py-4 whitespace-nowrap border-r border-gray-200">
-                          {editingId === graduacion.id ? (
+                          <div className="relative">
                             <select
-                              value={editData.estado}
-                              onChange={(e) => setEditData(prev => ({ ...prev, estado: e.target.value }))}
-                              className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                              value={graduacion.estado || ''}
+                              onChange={(e) => guardarCampo(graduacion.id, 'estado', e.target.value)}
+                              className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white hover:bg-gray-50"
+                              disabled={savingId === graduacion.id}
                             >
                               <option value="">Seleccionar estado</option>
                               <option value="NO CONTACTADO">NO CONTACTADO</option>
@@ -909,59 +864,34 @@ export default function GraduacionesPage({ currentUser }: GraduacionesPageProps)
                               <option value="PERDIDO">PERDIDO</option>
                               <option value="GANADO">GANADO</option>
                             </select>
-                          ) : (
-                            <div className="text-sm text-gray-900">
-                              {graduacion.estado || 'Sin especificar'}
-                            </div>
-                          )}
+                            {savingId === graduacion.id && (
+                              <div className="absolute right-2 top-1/2 transform -translate-y-1/2">
+                                <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600"></div>
+                              </div>
+                            )}
+                          </div>
                         </td>
                         
                         {/* Observaciones */}
                         <td className="px-6 py-4 border-r border-gray-200">
-                          {editingId === graduacion.id ? (
+                          <div className="relative">
                             <textarea
-                              value={editData.observaciones}
-                              onChange={(e) => setEditData(prev => ({ ...prev, observaciones: e.target.value }))}
+                              value={graduacion.observaciones || ''}
+                              onChange={(e) => guardarCampo(graduacion.id, 'observaciones', e.target.value)}
+                              onBlur={(e) => guardarCampo(graduacion.id, 'observaciones', e.target.value)}
                               rows={2}
-                              className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                              className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white hover:bg-gray-50 resize-none"
                               placeholder="Observaciones adicionales"
+                              disabled={savingId === graduacion.id}
                             />
-                          ) : (
-                            <div className="text-sm text-gray-900 max-w-xs truncate" title={graduacion.observaciones || 'Sin observaciones'}>
-                              {graduacion.observaciones || 'Sin observaciones'}
-                            </div>
-                          )}
+                            {savingId === graduacion.id && (
+                              <div className="absolute right-2 top-2">
+                                <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600"></div>
+                              </div>
+                            )}
+                          </div>
                         </td>
                         
-                        {/* Acciones */}
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                          {editingId === graduacion.id ? (
-                            <div className="flex space-x-2">
-                              <button
-                                onClick={() => guardarCambios(graduacion.id)}
-                                className="text-green-600 hover:text-green-900 flex items-center"
-                              >
-                                <Save className="w-4 h-4 mr-1" />
-                                Guardar
-                              </button>
-                              <button
-                                onClick={cancelarEdicion}
-                                className="text-gray-600 hover:text-gray-900 flex items-center"
-                              >
-                                <XIcon className="w-4 h-4 mr-1" />
-                                Cancelar
-                              </button>
-                            </div>
-                          ) : (
-                            <button
-                              onClick={() => iniciarEdicion(graduacion)}
-                              className="text-blue-600 hover:text-blue-900 flex items-center"
-                            >
-                              <Edit3 className="w-4 h-4 mr-1" />
-                              Editar
-                            </button>
-                          )}
-                        </td>
                       </tr>
                     ))}
                   </tbody>
