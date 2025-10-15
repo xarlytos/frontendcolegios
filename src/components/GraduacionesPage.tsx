@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Building, Users, Search, Calendar, X, BarChart3, Eye, Edit3, Save, X as XIcon } from 'lucide-react';
 import graduacionesService, { Graduacion, Contacto } from '../services/graduacionesService';
 import configuracionService from '../services/configuracionService';
+import { usersService, User } from '../services/usersService';
 import ContactosModal from './ContactosModal';
 
 interface GraduacionesPageProps {
@@ -20,6 +21,8 @@ export default function GraduacionesPage({ currentUser }: GraduacionesPageProps)
   const [filtroEstado, setFiltroEstado] = useState('');
   const [totalContactos, setTotalContactos] = useState(0);
   const [mostrarContactos, setMostrarContactos] = useState(false);
+  const [usuarios, setUsuarios] = useState<User[]>([]);
+  const [loadingUsuarios, setLoadingUsuarios] = useState(false);
   
   // Estados para modal de contactos
   const [contactosModal, setContactosModal] = useState<{
@@ -58,6 +61,8 @@ export default function GraduacionesPage({ currentUser }: GraduacionesPageProps)
       // Para comerciales, cargar la configuración desde la base de datos
       loadConfiguracionComercial();
     }
+    // Cargar usuarios para el desplegable de responsables
+    loadUsuarios();
   }, [isAdmin]);
 
   const loadConfiguracionComercial = async () => {
@@ -221,6 +226,24 @@ export default function GraduacionesPage({ currentUser }: GraduacionesPageProps)
     
     loadInitialData();
   }, [isAdmin, currentUser]);
+
+  const loadUsuarios = async () => {
+    try {
+      setLoadingUsuarios(true);
+      console.log('👥 Cargando usuarios para desplegable de responsables...');
+      const response = await usersService.getAllUsers();
+      if (response.success) {
+        setUsuarios(response.data.usuarios);
+        console.log('✅ Usuarios cargados:', response.data.usuarios.length);
+      } else {
+        console.error('❌ Error cargando usuarios:', response);
+      }
+    } catch (err) {
+      console.error('❌ Error loading usuarios:', err);
+    } finally {
+      setLoadingUsuarios(false);
+    }
+  };
 
   const loadAniosDisponibles = async () => {
     try {
@@ -789,16 +812,37 @@ export default function GraduacionesPage({ currentUser }: GraduacionesPageProps)
                         {/* Responsable */}
                         <td className="px-6 py-4 whitespace-nowrap border-r border-gray-200">
                           {editingId === graduacion.id ? (
-                            <input
-                              type="text"
+                            <select
                               value={editData.responsable}
                               onChange={(e) => setEditData(prev => ({ ...prev, responsable: e.target.value }))}
                               className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                              placeholder="Nombre del responsable"
-                            />
+                              disabled={loadingUsuarios}
+                            >
+                              <option value="">Seleccionar responsable</option>
+                              {loadingUsuarios ? (
+                                <option disabled>Cargando usuarios...</option>
+                              ) : (
+                                usuarios.map((usuario) => (
+                                  <option key={usuario.id} value={usuario.nombre}>
+                                    {usuario.nombre} ({usuario.role})
+                                  </option>
+                                ))
+                              )}
+                            </select>
                           ) : (
                             <div className="text-sm text-gray-900">
-                              {graduacion.responsable || 'Sin asignar'}
+                              {graduacion.responsable ? (
+                                <div>
+                                  <div className="font-medium">{graduacion.responsable}</div>
+                                  {usuarios.find(u => u.nombre === graduacion.responsable) && (
+                                    <div className="text-xs text-gray-500">
+                                      {usuarios.find(u => u.nombre === graduacion.responsable)?.role}
+                                    </div>
+                                  )}
+                                </div>
+                              ) : (
+                                <span className="text-gray-500 italic">Sin asignar</span>
+                              )}
                             </div>
                           )}
                         </td>
