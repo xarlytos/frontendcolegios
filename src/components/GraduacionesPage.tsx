@@ -37,6 +37,7 @@ export default function GraduacionesPage({ currentUser }: GraduacionesPageProps)
   
   // Estados para guardado automático
   const [savingId, setSavingId] = useState<string | null>(null);
+  const [debounceTimers, setDebounceTimers] = useState<Record<string, NodeJS.Timeout>>({});
 
   const isAdmin = currentUser?.role?.toLowerCase() === 'admin';
 
@@ -48,9 +49,22 @@ export default function GraduacionesPage({ currentUser }: GraduacionesPageProps)
       // Para comerciales, cargar la configuración desde la base de datos
       loadConfiguracionComercial();
     }
-    // Cargar usuarios para el desplegable de responsables
-    loadUsuarios();
   }, [isAdmin]);
+
+  // Cargar usuarios comerciales (igual que en ContactForm)
+  useEffect(() => {
+    const loadComerciales = async () => {
+      try {
+        console.log('👥 Cargando usuarios comerciales...');
+        await getAllUsers();
+        console.log('✅ Usuarios comerciales cargados:', users);
+      } catch (error) {
+        console.error('❌ Error al cargar usuarios comerciales:', error);
+      }
+    };
+
+    loadComerciales();
+  }, [getAllUsers]);
 
   const loadConfiguracionComercial = async () => {
     try {
@@ -214,18 +228,6 @@ export default function GraduacionesPage({ currentUser }: GraduacionesPageProps)
     loadInitialData();
   }, [isAdmin, currentUser]);
 
-  const loadUsuarios = async () => {
-    try {
-      setLoadingUsuarios(true);
-      console.log('👥 Cargando usuarios para desplegable de responsables...');
-      await getAllUsers();
-      console.log('✅ Usuarios cargados:', users.length);
-    } catch (err) {
-      console.error('❌ Error loading usuarios:', err);
-    } finally {
-      setLoadingUsuarios(false);
-    }
-  };
 
   const loadAniosDisponibles = async () => {
     try {
@@ -413,6 +415,27 @@ export default function GraduacionesPage({ currentUser }: GraduacionesPageProps)
     } finally {
       setSavingId(null);
     }
+  };
+
+  // Función con debounce para campos de texto
+  const guardarCampoConDebounce = (id: string, campo: string, valor: string) => {
+    const timerKey = `${id}-${campo}`;
+    
+    // Limpiar timer anterior si existe
+    if (debounceTimers[timerKey]) {
+      clearTimeout(debounceTimers[timerKey]);
+    }
+    
+    // Crear nuevo timer
+    const newTimer = setTimeout(() => {
+      guardarCampo(id, campo, valor);
+    }, 1000); // 1 segundo de delay
+    
+    // Guardar el timer
+    setDebounceTimers(prev => ({
+      ...prev,
+      [timerKey]: newTimer
+    }));
   };
 
 
@@ -805,7 +828,16 @@ export default function GraduacionesPage({ currentUser }: GraduacionesPageProps)
                             <input
                               type="text"
                               value={graduacion.tipoProducto || ''}
-                              onChange={(e) => guardarCampo(graduacion.id, 'tipoProducto', e.target.value)}
+                              onChange={(e) => {
+                                // Actualizar el estado local inmediatamente
+                                setGraduaciones(prev => prev.map(g => 
+                                  g.id === graduacion.id 
+                                    ? { ...g, tipoProducto: e.target.value }
+                                    : g
+                                ));
+                                // Guardar con debounce
+                                guardarCampoConDebounce(graduacion.id, 'tipoProducto', e.target.value);
+                              }}
                               onBlur={(e) => guardarCampo(graduacion.id, 'tipoProducto', e.target.value)}
                               className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white hover:bg-gray-50"
                               placeholder="Tipo de producto"
@@ -880,7 +912,16 @@ export default function GraduacionesPage({ currentUser }: GraduacionesPageProps)
                           <div className="relative">
                             <textarea
                               value={graduacion.observaciones || ''}
-                              onChange={(e) => guardarCampo(graduacion.id, 'observaciones', e.target.value)}
+                              onChange={(e) => {
+                                // Actualizar el estado local inmediatamente
+                                setGraduaciones(prev => prev.map(g => 
+                                  g.id === graduacion.id 
+                                    ? { ...g, observaciones: e.target.value }
+                                    : g
+                                ));
+                                // Guardar con debounce
+                                guardarCampoConDebounce(graduacion.id, 'observaciones', e.target.value);
+                              }}
                               onBlur={(e) => guardarCampo(graduacion.id, 'observaciones', e.target.value)}
                               rows={2}
                               className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white hover:bg-gray-50 resize-none"
