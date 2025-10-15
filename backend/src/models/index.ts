@@ -9,3 +9,4 @@ export { Importacion, IImportacion, EstadoImportacion } from './Importacion';
 export { ImportacionFila, IImportacionFila, EstadoFila } from './ImportacionFila';
 export { AuditLog, IAuditLog, EntidadAudit, AccionAudit } from './AuditLog';
 export { Graduacion, IGraduacion } from './Graduacion';
+export { Producto, IProducto } from './Producto';

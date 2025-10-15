@@ -210,12 +210,13 @@ export class GraduacionesController {
   static async actualizarGraduacion(req: AuthRequest, res: Response) {
     try {
       const { id } = req.params; // Este es el nombre del colegio
-      const { responsable, tipoProducto, prevision, estado, observaciones } = req.body;
+      const { responsable, tipoProducto, producto, prevision, estado, observaciones } = req.body;
 
       console.log('🔄 Actualizando graduación:', {
         colegio: id,
         responsable,
         tipoProducto,
+        producto,
         prevision,
         estado,
         observaciones
@@ -232,6 +233,7 @@ export class GraduacionesController {
           anioNacimiento: 2007, // Por defecto, se puede mejorar
           responsable: responsable || '',
           tipoProducto: tipoProducto || '',
+          producto: producto ? new Types.ObjectId(producto) : undefined,
           prevision: prevision || '',
           estado: estado || '',
           observaciones: observaciones || '',
@@ -242,6 +244,7 @@ export class GraduacionesController {
         // Actualizar campos existentes
         graduacion.responsable = responsable || graduacion.responsable;
         graduacion.tipoProducto = tipoProducto || graduacion.tipoProducto;
+        graduacion.producto = producto ? new Types.ObjectId(producto) : graduacion.producto;
         graduacion.prevision = prevision || graduacion.prevision;
         graduacion.estado = estado || graduacion.estado;
         graduacion.observaciones = observaciones || graduacion.observaciones;
