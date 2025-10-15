@@ -114,6 +114,15 @@ export class UniversidadesController {
     }
   }
 
+  // Función para normalizar nombres (eliminar acentos y convertir a minúsculas)
+  private static normalizeName(name: string): string {
+    return name
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '') // Eliminar acentos
+      .trim();
+  }
+
   // Crear nueva universidad
   static async crearUniversidad(req: AuthRequest, res: Response) {
     try {
@@ -169,6 +178,29 @@ export class UniversidadesController {
 
       await nuevaUniversidad.save();
 
+      // NUEVO: Asociar contactos existentes con el mismo nombre normalizado
+      console.log('🔍 Buscando contactos para asociar con el nuevo colegio...');
+      const nombreNormalizado = this.normalizeName(nombre);
+      console.log('🔍 Nombre normalizado:', nombreNormalizado);
+      
+      // Buscar contactos que tengan un nombre de colegio que coincida al normalizar
+      const contactosParaAsociar = await Contacto.find({});
+      const contactosAsociados: string[] = [];
+      
+      for (const contacto of contactosParaAsociar) {
+        const nombreColegioNormalizado = this.normalizeName(contacto.nombreColegio || '');
+        if (nombreColegioNormalizado === nombreNormalizado && contacto.nombreColegio !== nombre) {
+          console.log(`🔗 Asociando contacto ${contacto.nombreCompleto} (${contacto.nombreColegio}) con nuevo colegio ${nombre}`);
+          
+          // Actualizar el nombre del colegio en el contacto
+          contacto.nombreColegio = nombre;
+          await contacto.save();
+          contactosAsociados.push(contacto._id.toString());
+        }
+      }
+      
+      console.log(`✅ ${contactosAsociados.length} contactos asociados automáticamente`);
+
       // Registrar en auditoría
       await AuditLog.create({
         usuarioId: new mongoose.Types.ObjectId(req.user!.userId),
@@ -180,13 +212,15 @@ export class UniversidadesController {
           nombre: nuevaUniversidad.nombre,
           tipo: nuevaUniversidad.tipo,
           ciudad: nuevaUniversidad.ciudad,
-          activa: nuevaUniversidad.activa
+          activa: nuevaUniversidad.activa,
+          contactosAsociados: contactosAsociados.length
         }
       });
 
       res.status(201).json({ 
         message: 'Colegio creado exitosamente',
-        universidad: nuevaUniversidad 
+        universidad: nuevaUniversidad,
+        contactosAsociados: contactosAsociados.length
       });
     } catch (error) {
       console.error('Error al crear universidad:', error);

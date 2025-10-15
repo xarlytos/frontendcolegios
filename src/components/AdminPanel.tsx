@@ -350,7 +350,9 @@ export default function AdminPanel({
       console.log('📤 Datos a enviar para crear colegio:', createUniversityForm);
       console.log('📤 Tipo de datos:', typeof createUniversityForm.tipo, createUniversityForm.tipo);
       console.log('📤 Ciudad de datos:', typeof createUniversityForm.ciudad, createUniversityForm.ciudad);
-      await universidadesService.createUniversidad(createUniversityForm);
+      
+      // Crear el colegio y obtener la respuesta con información de contactos asociados
+      const response = await universidadesService.createUniversidad(createUniversityForm);
       
       // Recargar la lista de universidades
       const data = await universidadesService.getUniversidades();
@@ -367,7 +369,12 @@ export default function AdminPanel({
       });
       setShowCreateUniversityModal(false);
       
-      alert('Colegio creado exitosamente');
+      // Mostrar mensaje con información de contactos asociados
+      if (response.contactosAsociados && response.contactosAsociados > 0) {
+        alert(`Colegio creado exitosamente. Se asociaron automáticamente ${response.contactosAsociados} contactos existentes.`);
+      } else {
+        alert('Colegio creado exitosamente');
+      }
     } catch (error: any) {
       console.error('Error creating university:', error);
       alert(error.message || 'Error al crear el colegio');
