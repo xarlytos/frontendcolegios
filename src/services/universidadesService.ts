@@ -153,13 +153,18 @@ class UniversidadesService {
 
   // Normalizar nombres de colegios existentes
   async normalizarNombresColegios(): Promise<{success: boolean, contactosActualizados: number, errores: number, totalContactos: number}> {
+    console.log('🔄 Iniciando normalización de nombres...');
     const response = await apiService.post<{success: boolean, contactosActualizados: number, errores: number, totalContactos: number}>(
       `${this.baseUrl}/normalizar-nombres`
     );
-    if (!response.data) {
+    console.log('📥 Respuesta de normalización:', response);
+    
+    // El endpoint devuelve la respuesta directamente, no envuelta en data
+    const result = response as any;
+    if (!result.success) {
       throw new Error('Error al normalizar los nombres');
     }
-    return response.data;
+    return result;
   }
 }
 
