@@ -90,10 +90,13 @@ class UniversidadesService {
     console.log('🔍 URL para obtener universidades:', url);
     const response = await apiService.get<{universidades: Universidad[], pagination: any}>(url);
     console.log('📥 Respuesta del servidor:', response);
-    console.log('📊 Universidades en la respuesta:', response.data?.universidades?.length || 0);
     console.log('📊 Estructura de la respuesta:', Object.keys(response));
-    console.log('📊 Estructura de response.data:', Object.keys(response.data || {}));
-    return response.data?.universidades || [];
+    
+    // El endpoint devuelve directamente {universidades, pagination}
+    // No está envuelto en ApiResponse, es la respuesta directa
+    const universidades = (response as any).universidades || [];
+    console.log('📊 Universidades encontradas:', universidades.length);
+    return universidades;
   }
 
   // Obtener una universidad por ID
