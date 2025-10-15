@@ -84,8 +84,13 @@ class UniversidadesService {
   // Obtener todas las universidades (público para usuarios autenticados)
   async getUniversidades(includeInactive: boolean = false): Promise<Universidad[]> {
     // Solicitar todas las universidades sin límite de paginación
-    const url = includeInactive ? `${this.baseUrl}?activa=false&limit=999999` : `${this.baseUrl}?limit=999999`;
+    const url = includeInactive 
+      ? `${this.baseUrl}?limit=999999` 
+      : `${this.baseUrl}?activa=true&limit=999999`;
+    console.log('🔍 URL para obtener universidades:', url);
     const response = await apiService.get<{universidades: Universidad[], pagination: any}>(url);
+    console.log('📥 Respuesta del servidor:', response);
+    console.log('📊 Universidades en la respuesta:', response.data?.universidades?.length || 0);
     return response.data?.universidades || [];
   }
 

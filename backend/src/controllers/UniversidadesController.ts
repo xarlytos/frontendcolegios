@@ -16,7 +16,7 @@ export class UniversidadesController {
         page = 1, 
         limit = 10, 
         search, 
-        activa = 'true' // Por defecto mostrar solo universidades activas
+        activa // No filtrar por defecto, mostrar todas
       } = req.query;
 
       const skip = (Number(page) - 1) * Number(limit);
@@ -30,8 +30,10 @@ export class UniversidadesController {
         ];
       }
 
-      // Filtrar por activa (por defecto true, pero se puede cambiar)
-      filter.activa = activa === 'true';
+      // Filtrar por activa solo si se especifica el parámetro
+      if (activa !== undefined) {
+        filter.activa = activa === 'true';
+      }
 
       const universidades = await Universidad.find(filter)
         .sort({ nombre: 1 })

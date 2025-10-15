@@ -146,15 +146,19 @@ export default function AdminPanel({
   // Cargar universidades cuando se selecciona el tab de universidades
   useEffect(() => {
     const loadUniversities = async () => {
-      if (activeTab === 'universities' && universities.length === 0) {
+      if (activeTab === 'universities') {
         setLoadingUniversities(true);
         try {
-          const data = await universidadesService.getUniversidades();
+          console.log('🔄 Cargando universidades...');
+          // Cargar todas las universidades (activas e inactivas) para el admin
+          const data = await universidadesService.getUniversidades(true);
           console.log('🎓 Universidades cargadas:', data);
-          // Mostrar todos los colegios (activos e inactivos) en el admin
+          console.log('📊 Cantidad de universidades:', data.length);
           setUniversities(data);
         } catch (error) {
-          console.error('Error loading universities:', error);
+          console.error('❌ Error loading universities:', error);
+          console.error('❌ Error details:', error);
+          setUniversities([]);
         } finally {
           setLoadingUniversities(false);
         }
@@ -162,7 +166,7 @@ export default function AdminPanel({
     };
     
     loadUniversities();
-  }, [activeTab, universities.length]);
+  }, [activeTab]);
 
   const comercialUsers = users.filter(user => user.role === 'comercial');
   
