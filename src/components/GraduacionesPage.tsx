@@ -739,31 +739,31 @@ export default function GraduacionesPage({ currentUser }: GraduacionesPageProps)
                 </div>
               </div>
               
-              {/* Tabla estilo Excel */}
-              <div className="overflow-x-auto">
+              {/* Tabla estilo Excel con sticky header */}
+              <div className="overflow-x-auto max-h-[70vh] overflow-y-auto">
                 <table className="min-w-full divide-y divide-gray-200">
-                  {/* Encabezados de la tabla */}
-                  <thead className="bg-blue-50 border-b-2 border-blue-200">
+                  {/* Encabezados de la tabla - Sticky Header */}
+                  <thead className="bg-blue-50 border-b-2 border-blue-200 sticky top-0 z-10 shadow-sm">
                     <tr>
-                      <th className="px-6 py-4 text-left text-sm font-semibold text-blue-900 border-r border-blue-200">
+                      <th className="px-6 py-4 text-left text-sm font-semibold text-blue-900 border-r border-blue-200 bg-blue-50">
                         Nombre Colegio
                       </th>
-                      <th className="px-6 py-4 text-left text-sm font-semibold text-blue-900 border-r border-blue-200">
+                      <th className="px-6 py-4 text-left text-sm font-semibold text-blue-900 border-r border-blue-200 bg-blue-50">
                         Total Contactos
                       </th>
-                      <th className="px-6 py-4 text-left text-sm font-semibold text-blue-900 border-r border-blue-200">
+                      <th className="px-6 py-4 text-left text-sm font-semibold text-blue-900 border-r border-blue-200 bg-blue-50">
                         Responsable
                       </th>
-                      <th className="px-6 py-4 text-left text-sm font-semibold text-blue-900 border-r border-blue-200">
+                      <th className="px-6 py-4 text-left text-sm font-semibold text-blue-900 border-r border-blue-200 bg-blue-50">
                         Tipo Producto
                       </th>
-                      <th className="px-6 py-4 text-left text-sm font-semibold text-blue-900 border-r border-blue-200">
+                      <th className="px-6 py-4 text-left text-sm font-semibold text-blue-900 border-r border-blue-200 bg-blue-50">
                         Previsión
                       </th>
-                      <th className="px-6 py-4 text-left text-sm font-semibold text-blue-900 border-r border-blue-200">
+                      <th className="px-6 py-4 text-left text-sm font-semibold text-blue-900 border-r border-blue-200 bg-blue-50">
                         Estado
                       </th>
-                      <th className="px-6 py-4 text-left text-sm font-semibold text-blue-900">
+                      <th className="px-6 py-4 text-left text-sm font-semibold text-blue-900 bg-blue-50">
                         Observaciones
                       </th>
                     </tr>
