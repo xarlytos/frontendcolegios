@@ -28,6 +28,15 @@ export default function CountPage({ onNavigateToContacts, currentUser }: CountPa
 
   console.log('🎯 CountPage - Contactos del hook:', allContacts.length, allContacts);
 
+  // Función para normalizar nombres (eliminar acentos y convertir a minúsculas)
+  const normalizeName = (name: string): string => {
+    return name
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '') // Eliminar acentos
+      .trim();
+  };
+
   // Agregar logs para debugging
   console.log('🎯 CountPage - Filtros actuales:', { selectedUniversidad, selectedRegimen, selectedLocalidad });
   console.log('🏫 AllUniversidades cargadas:', allUniversidades.length, allUniversidades);
@@ -212,6 +221,9 @@ export default function CountPage({ onNavigateToContacts, currentUser }: CountPa
       }> 
     }> = {};
     
+    // Mapa para normalizar nombres de localidades y mantener el nombre original
+    const localidadMap: Record<string, string> = {};
+    
     // Filtrar universidades por régimen y localidad si están seleccionados
     const universidadesFiltradas = allUniversidades.filter(universidad => {
       if (universidad.activa === false) return false; // Solo colegios activos
@@ -222,44 +234,60 @@ export default function CountPage({ onNavigateToContacts, currentUser }: CountPa
     
     // Inicializar localidades y colegios
     universidadesFiltradas.forEach(universidad => {
-      const localidad = universidad.ciudad || 'Sin localidad';
+      const localidadOriginal = universidad.ciudad || 'Sin localidad';
+      const localidadNormalizada = normalizeName(localidadOriginal);
       
-      if (!localidades[localidad]) {
-        localidades[localidad] = {
-          localidad,
+      // Si ya existe una localidad normalizada, usar el nombre original más común
+      if (!localidadMap[localidadNormalizada]) {
+        localidadMap[localidadNormalizada] = localidadOriginal;
+      }
+      
+      const localidadKey = localidadNormalizada;
+      
+      if (!localidades[localidadKey]) {
+        localidades[localidadKey] = {
+          localidad: localidadMap[localidadNormalizada],
           totalContactos: 0,
           totalColegios: 0,
           colegios: {}
         };
       }
       
-      localidades[localidad].colegios[universidad.nombre] = { 
+      localidades[localidadKey].colegios[universidad.nombre] = { 
         colegio: universidad.nombre, 
         tipo: universidad.tipo || 'publica',
         total: 0, 
         porAnio: {}, 
         porComercial: {} 
       };
-      localidades[localidad].totalColegios += 1;
+      localidades[localidadKey].totalColegios += 1;
     });
     
     // Agregar datos de contactos filtrados
     filteredContacts.forEach(contact => {
       const colegio = contact.nombre_colegio || 'Sin colegio';
       const universidad = allUniversidades.find(uni => uni.nombre === colegio);
-      const localidad = universidad?.ciudad || 'Sin localidad';
+      const localidadOriginal = universidad?.ciudad || 'Sin localidad';
+      const localidadNormalizada = normalizeName(localidadOriginal);
       
-      if (!localidades[localidad]) {
-        localidades[localidad] = {
-          localidad,
+      // Si ya existe una localidad normalizada, usar el nombre original más común
+      if (!localidadMap[localidadNormalizada]) {
+        localidadMap[localidadNormalizada] = localidadOriginal;
+      }
+      
+      const localidadKey = localidadNormalizada;
+      
+      if (!localidades[localidadKey]) {
+        localidades[localidadKey] = {
+          localidad: localidadMap[localidadNormalizada],
           totalContactos: 0,
           totalColegios: 0,
           colegios: {}
         };
       }
       
-      if (!localidades[localidad].colegios[colegio]) {
-        localidades[localidad].colegios[colegio] = { 
+      if (!localidades[localidadKey].colegios[colegio]) {
+        localidades[localidadKey].colegios[colegio] = { 
           colegio, 
           tipo: universidad?.tipo || 'publica',
           total: 0, 
@@ -268,17 +296,17 @@ export default function CountPage({ onNavigateToContacts, currentUser }: CountPa
         };
       }
       
-      localidades[localidad].colegios[colegio].total += 1;
-      localidades[localidad].totalContactos += 1;
+      localidades[localidadKey].colegios[colegio].total += 1;
+      localidades[localidadKey].totalContactos += 1;
       
       if (contact.año_nacimiento) {
-        localidades[localidad].colegios[colegio].porAnio[contact.año_nacimiento] = 
-          (localidades[localidad].colegios[colegio].porAnio[contact.año_nacimiento] || 0) + 1;
+        localidades[localidadKey].colegios[colegio].porAnio[contact.año_nacimiento] = 
+          (localidades[localidadKey].colegios[colegio].porAnio[contact.año_nacimiento] || 0) + 1;
       }
       
       const comercialNombre = contact.comercial_nombre || contact.comercial || 'Sin asignar';
-      localidades[localidad].colegios[colegio].porComercial[comercialNombre] = 
-        (localidades[localidad].colegios[colegio].porComercial[comercialNombre] || 0) + 1;
+      localidades[localidadKey].colegios[colegio].porComercial[comercialNombre] = 
+        (localidades[localidadKey].colegios[colegio].porComercial[comercialNombre] || 0) + 1;
     });
     
     // Convertir a array y ordenar por localidad
@@ -396,17 +424,17 @@ export default function CountPage({ onNavigateToContacts, currentUser }: CountPa
               onFocus={handleColegioInputFocus}
               onBlur={handleColegioInputBlur}
               placeholder={loadingUniversidades ? 'Cargando colegios...' : 'Escribir nombre del colegio...'}
-              className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full border border-blue-300 bg-blue-50 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-400 focus:border-blue-400 text-blue-900 placeholder-blue-400"
               disabled={loadingUniversidades}
             />
             
             {/* Dropdown de autocompletado */}
             {showColegioDropdown && filteredColegios.length > 0 && (
-              <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-auto">
+              <div className="absolute z-10 w-full mt-1 bg-white border border-blue-300 rounded-md shadow-lg max-h-60 overflow-auto">
                 {filteredColegios.map((cole, index) => (
                   <div
                     key={index}
-                    className="px-3 py-2 hover:bg-blue-50 cursor-pointer text-sm"
+                    className="px-3 py-2 hover:bg-blue-100 cursor-pointer text-sm text-blue-900"
                     onMouseDown={() => handleColegioSelect(cole)}
                   >
                     {cole}
@@ -424,7 +452,7 @@ export default function CountPage({ onNavigateToContacts, currentUser }: CountPa
                   setSelectedUniversidad('');
                   setShowColegioDropdown(false);
                 }}
-                className="absolute right-2 top-7 text-gray-400 hover:text-gray-600"
+                className="absolute right-2 top-7 text-blue-400 hover:text-blue-600"
               >
                 ✕
               </button>
