@@ -264,11 +264,17 @@ export default function CountPage({ onNavigateToContacts, currentUser }: CountPa
     });
     
     // Agregar datos de contactos filtrados
+    console.log('🔍 Debugging contactos y universidades:');
+    console.log('📊 Total contactos filtrados:', filteredContacts.length);
+    console.log('📊 Total universidades:', allUniversidades.length);
+    
     filteredContacts.forEach(contact => {
       const colegio = contact.nombre_colegio || 'Sin colegio';
       const universidad = allUniversidades.find(uni => uni.nombre === colegio);
       const localidadOriginal = universidad?.ciudad || 'Sin localidad';
       const localidadNormalizada = normalizeName(localidadOriginal);
+      
+      console.log(`👤 Contacto: ${contact.nombre_completo}, Colegio: "${colegio}", Universidad encontrada: ${universidad ? 'Sí' : 'No'}, Localidad: "${localidadOriginal}"`);
       
       // Si ya existe una localidad normalizada, usar el nombre original más común
       if (!localidadMap[localidadNormalizada]) {

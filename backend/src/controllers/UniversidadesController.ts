@@ -951,6 +951,14 @@ console.log('🗺️ Jerarquía cache creado:', jerarquiaCache.size, 'relaciones
         const universidades = await Universidad.find({});
         console.log(`📊 Total de universidades encontradas: ${universidades.length}`);
         
+        // Mostrar algunos ejemplos de localidades actuales
+        const ejemplosLocalidades = universidades.slice(0, 5).map(u => ({
+          nombre: u.nombre,
+          ciudad: u.ciudad,
+          ciudadNormalizada: UniversidadesController.normalizeName(u.ciudad || '')
+        }));
+        console.log('📋 Ejemplos de localidades a procesar:', ejemplosLocalidades);
+        
         let universidadesActualizadas = 0;
         let errores = 0;
         const cambios: Array<{universidadId: string, localidadAnterior: string, localidadNueva: string}> = [];
@@ -958,7 +966,7 @@ console.log('🗺️ Jerarquía cache creado:', jerarquiaCache.size, 'relaciones
         for (const universidad of universidades) {
           try {
             const localidadAnterior = universidad.ciudad || '';
-            const localidadNormalizada = this.normalizeName(localidadAnterior);
+            const localidadNormalizada = UniversidadesController.normalizeName(localidadAnterior);
             
             // Solo actualizar si la localidad cambió al normalizar
             if (localidadAnterior !== localidadNormalizada && localidadNormalizada !== '') {
@@ -973,6 +981,9 @@ console.log('🗺️ Jerarquía cache creado:', jerarquiaCache.size, 'relaciones
                 localidadAnterior,
                 localidadNueva: localidadNormalizada
               });
+            } else {
+              // No es un error, simplemente no necesita normalización
+              console.log(`✅ Universidad ${universidad.nombre} ya está normalizada: "${localidadAnterior}"`);
             }
           } catch (error) {
             console.error(`❌ Error normalizando universidad ${universidad._id}:`, error);
