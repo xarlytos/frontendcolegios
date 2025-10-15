@@ -166,6 +166,22 @@ class UniversidadesService {
     }
     return result;
   }
+
+  // Normalizar localidades de universidades
+  async normalizarLocalidadesUniversidades(): Promise<{success: boolean, universidadesActualizadas: number, errores: number, totalUniversidades: number}> {
+    console.log('🔄 Iniciando normalización de localidades...');
+    const response = await apiService.post<{success: boolean, universidadesActualizadas: number, errores: number, totalUniversidades: number}>(
+      `${this.baseUrl}/normalizar-localidades`
+    );
+    console.log('📥 Respuesta de normalización de localidades:', response);
+    
+    // El endpoint devuelve la respuesta directamente, no envuelta en data
+    const result = response as any;
+    if (!result.success) {
+      throw new Error('Error al normalizar las localidades');
+    }
+    return result;
+  }
 }
 
 const universidadesService = new UniversidadesService();

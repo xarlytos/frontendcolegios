@@ -70,6 +70,7 @@ export default function AdminPanel({
   const [creatingTitulacion, setCreatingTitulacion] = useState(false);
   const [editingTitulacion, setEditingTitulacion] = useState(false);
   const [normalizandoNombres, setNormalizandoNombres] = useState(false);
+  const [normalizandoLocalidades, setNormalizandoLocalidades] = useState(false);
 
   // Debug useEffect para monitorear cambios en selectedPermissions
   useEffect(() => {
@@ -696,6 +697,30 @@ export default function AdminPanel({
     }
   };
 
+  const handleNormalizarLocalidades = async () => {
+    if (!confirm('¿Estás seguro de que quieres normalizar todas las localidades de los colegios existentes? Esta acción convertirá todas las localidades a minúsculas y eliminará acentos. Esta acción no se puede deshacer.')) {
+      return;
+    }
+
+    setNormalizandoLocalidades(true);
+    try {
+      const response = await universidadesService.normalizarLocalidadesUniversidades();
+      if (response.success) {
+        alert(`Normalización de localidades completada exitosamente. ${response.universidadesActualizadas} universidades actualizadas de ${response.totalUniversidades} total. ${response.errores} errores.`);
+        // Recargar la lista de universidades para mostrar los cambios
+        const data = await universidadesService.getUniversidades(true);
+        setUniversities(data);
+      } else {
+        alert('Error al normalizar las localidades de los colegios');
+      }
+    } catch (error: any) {
+      console.error('Error normalizing localities:', error);
+      alert(error.message || 'Error al normalizar las localidades de los colegios');
+    } finally {
+      setNormalizandoLocalidades(false);
+    }
+  };
+
   return (
     <div className="p-6">
       <div className="mb-6">
@@ -944,6 +969,23 @@ export default function AdminPanel({
                   <>
                     <Database className="w-4 h-4 mr-2" />
                     Normalizar Nombres de Colegios
+                  </>
+                )}
+              </button>
+              <button
+                onClick={handleNormalizarLocalidades}
+                disabled={normalizandoLocalidades}
+                className="flex items-center px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {normalizandoLocalidades ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Normalizando...
+                  </>
+                ) : (
+                  <>
+                    <Building2 className="w-4 h-4 mr-2" />
+                    Normalizar Localidades
                   </>
                 )}
               </button>

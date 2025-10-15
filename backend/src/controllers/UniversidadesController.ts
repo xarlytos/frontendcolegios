@@ -934,4 +934,81 @@ console.log('🗺️ Jerarquía cache creado:', jerarquiaCache.size, 'relaciones
         });
       }
     }
+
+    // Normalizar localidades de universidades
+    static async normalizarLocalidadesUniversidades(req: AuthRequest, res: Response) {
+      try {
+        // Solo admins pueden normalizar localidades
+        if (req.user?.rol !== RolUsuario.ADMIN) {
+          return res.status(403).json({ 
+            error: 'No tienes permisos para normalizar localidades de universidades' 
+          });
+        }
+
+        console.log('🔍 Iniciando normalización de localidades de universidades...');
+        
+        // Obtener todas las universidades
+        const universidades = await Universidad.find({});
+        console.log(`📊 Total de universidades encontradas: ${universidades.length}`);
+        
+        let universidadesActualizadas = 0;
+        let errores = 0;
+        const cambios: Array<{universidadId: string, localidadAnterior: string, localidadNueva: string}> = [];
+        
+        for (const universidad of universidades) {
+          try {
+            const localidadAnterior = universidad.ciudad || '';
+            const localidadNormalizada = this.normalizeName(localidadAnterior);
+            
+            // Solo actualizar si la localidad cambió al normalizar
+            if (localidadAnterior !== localidadNormalizada && localidadNormalizada !== '') {
+              console.log(`🔄 Normalizando localidad: "${localidadAnterior}" → "${localidadNormalizada}"`);
+              
+              universidad.ciudad = localidadNormalizada;
+              await universidad.save();
+              
+              universidadesActualizadas++;
+              cambios.push({
+                universidadId: universidad._id.toString(),
+                localidadAnterior,
+                localidadNueva: localidadNormalizada
+              });
+            }
+          } catch (error) {
+            console.error(`❌ Error normalizando universidad ${universidad._id}:`, error);
+            errores++;
+          }
+        }
+        
+        console.log(`✅ Normalización de localidades completada: ${universidadesActualizadas} universidades actualizadas, ${errores} errores`);
+        
+        // Registrar en auditoría
+        await AuditLog.create({
+          usuarioId: new mongoose.Types.ObjectId(req.user!.userId),
+          accion: AccionAudit.UPDATE,
+          entidad: EntidadAudit.UNIVERSIDAD,
+          entidadId: 'BULK_LOCALIDAD_NORMALIZATION',
+          despues: {
+            accion: 'NORMALIZACION_MASIVA_LOCALIDADES_UNIVERSIDADES',
+            universidadesActualizadas,
+            errores,
+            cambios: cambios.slice(0, 10) // Solo los primeros 10 cambios en el log
+          }
+        });
+
+        res.json({
+          success: true,
+          message: 'Normalización de localidades completada',
+          universidadesActualizadas,
+          errores,
+          totalUniversidades: universidades.length
+        });
+      } catch (error) {
+        console.error('Error normalizando localidades de universidades:', error);
+        res.status(500).json({ 
+          success: false,
+          error: 'Error interno del servidor' 
+        });
+      }
+    }
 }
