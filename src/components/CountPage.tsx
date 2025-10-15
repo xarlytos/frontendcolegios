@@ -270,11 +270,17 @@ export default function CountPage({ onNavigateToContacts, currentUser }: CountPa
     
     filteredContacts.forEach(contact => {
       const colegio = contact.nombre_colegio || 'Sin colegio';
-      const universidad = allUniversidades.find(uni => uni.nombre === colegio);
+      const colegioNormalizado = normalizeName(colegio);
+      
+      // Buscar universidad usando comparación normalizada
+      const universidad = allUniversidades.find(uni => 
+        normalizeName(uni.nombre) === colegioNormalizado
+      );
+      
       const localidadOriginal = universidad?.ciudad || 'Sin localidad';
       const localidadNormalizada = normalizeName(localidadOriginal);
       
-      console.log(`👤 Contacto: ${contact.nombre_completo}, Colegio: "${colegio}", Universidad encontrada: ${universidad ? 'Sí' : 'No'}, Localidad: "${localidadOriginal}"`);
+      console.log(`👤 Contacto: ${contact.nombre}, Colegio: "${colegio}" (normalizado: "${colegioNormalizado}"), Universidad encontrada: ${universidad ? 'Sí' : 'No'}, Localidad: "${localidadOriginal}"`);
       
       // Si ya existe una localidad normalizada, usar el nombre original más común
       if (!localidadMap[localidadNormalizada]) {
