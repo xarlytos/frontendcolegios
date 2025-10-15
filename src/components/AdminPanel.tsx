@@ -69,8 +69,6 @@ export default function AdminPanel({
   });
   const [creatingTitulacion, setCreatingTitulacion] = useState(false);
   const [editingTitulacion, setEditingTitulacion] = useState(false);
-  const [normalizandoNombres, setNormalizandoNombres] = useState(false);
-  const [normalizandoLocalidades, setNormalizandoLocalidades] = useState(false);
 
   // Debug useEffect para monitorear cambios en selectedPermissions
   useEffect(() => {
@@ -346,19 +344,40 @@ export default function AdminPanel({
   const handleCreateUniversity = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!createUniversityForm.nombre || !createUniversityForm.codigo || !createUniversityForm.ciudad) {
-      alert('El nombre, código y ciudad son obligatorios');
+    // Generate codigo if it's empty
+    let codigo = createUniversityForm.codigo;
+    if (!codigo && createUniversityForm.nombre) {
+      codigo = createUniversityForm.nombre
+        .toUpperCase()
+        .replace(/[^A-Z0-9]/g, '')
+        .slice(0, 10);
+    }
+    
+    if (!createUniversityForm.nombre || !createUniversityForm.ciudad) {
+      alert('El nombre y ciudad son obligatorios');
+      return;
+    }
+    
+    if (!codigo) {
+      alert('No se pudo generar un código válido. Por favor, ingrese un nombre con letras o números.');
       return;
     }
 
     setCreatingUniversity(true);
     try {
-      console.log('📤 Datos a enviar para crear colegio:', createUniversityForm);
-      console.log('📤 Tipo de datos:', typeof createUniversityForm.tipo, createUniversityForm.tipo);
-      console.log('📤 Ciudad de datos:', typeof createUniversityForm.ciudad, createUniversityForm.ciudad);
+      // Prepare data with generated codigo
+      const dataToSend = {
+        ...createUniversityForm,
+        codigo: codigo
+      };
+      
+      console.log('📤 Datos a enviar para crear colegio:', dataToSend);
+      console.log('📤 Tipo de datos:', typeof dataToSend.tipo, dataToSend.tipo);
+      console.log('📤 Ciudad de datos:', typeof dataToSend.ciudad, dataToSend.ciudad);
+      console.log('📤 Código generado:', codigo);
       
       // Crear el colegio y obtener la respuesta con información de contactos asociados
-      const response = await universidadesService.createUniversidad(createUniversityForm);
+      const response = await universidadesService.createUniversidad(dataToSend);
       
       // Recargar la lista de universidades
       const data = await universidadesService.getUniversidades();
@@ -676,50 +695,6 @@ export default function AdminPanel({
     }
   };
 
-  const handleNormalizarNombres = async () => {
-    if (!confirm('¿Estás seguro de que quieres normalizar todos los nombres de colegios existentes? Esta acción convertirá todos los nombres a minúsculas y eliminará acentos. Esta acción no se puede deshacer.')) {
-      return;
-    }
-
-    setNormalizandoNombres(true);
-    try {
-      const response = await universidadesService.normalizarNombresColegios();
-      if (response.success) {
-        alert(`Normalización completada exitosamente. ${response.contactosActualizados} contactos actualizados de ${response.totalContactos} total. ${response.errores} errores.`);
-      } else {
-        alert('Error al normalizar los nombres de colegios');
-      }
-    } catch (error: any) {
-      console.error('Error normalizing names:', error);
-      alert(error.message || 'Error al normalizar los nombres de colegios');
-    } finally {
-      setNormalizandoNombres(false);
-    }
-  };
-
-  const handleNormalizarLocalidades = async () => {
-    if (!confirm('¿Estás seguro de que quieres normalizar todas las localidades de los colegios existentes? Esta acción convertirá todas las localidades a minúsculas y eliminará acentos. Esta acción no se puede deshacer.')) {
-      return;
-    }
-
-    setNormalizandoLocalidades(true);
-    try {
-      const response = await universidadesService.normalizarLocalidadesUniversidades();
-      if (response.success) {
-        alert(`Normalización de localidades completada exitosamente. ${response.universidadesActualizadas} universidades actualizadas de ${response.totalUniversidades} total. ${response.errores} errores.`);
-        // Recargar la lista de universidades para mostrar los cambios
-        const data = await universidadesService.getUniversidades(true);
-        setUniversities(data);
-      } else {
-        alert('Error al normalizar las localidades de los colegios');
-      }
-    } catch (error: any) {
-      console.error('Error normalizing localities:', error);
-      alert(error.message || 'Error al normalizar las localidades de los colegios');
-    } finally {
-      setNormalizandoLocalidades(false);
-    }
-  };
 
   return (
     <div className="p-6">
@@ -954,42 +929,6 @@ export default function AdminPanel({
               Visualiza todos los colegios disponibles en el sistema. 
               Total de colegios: {universities.length}
             </p>
-            <div className="flex gap-2">
-              <button
-                onClick={handleNormalizarNombres}
-                disabled={normalizandoNombres}
-                className="flex items-center px-3 py-2 bg-orange-600 text-white rounded-md hover:bg-orange-700 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {normalizandoNombres ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Normalizando...
-                  </>
-                ) : (
-                  <>
-                    <Database className="w-4 h-4 mr-2" />
-                    Normalizar Nombres de Colegios
-                  </>
-                )}
-              </button>
-              <button
-                onClick={handleNormalizarLocalidades}
-                disabled={normalizandoLocalidades}
-                className="flex items-center px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {normalizandoLocalidades ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Normalizando...
-                  </>
-                ) : (
-                  <>
-                    <Building2 className="w-4 h-4 mr-2" />
-                    Normalizar Localidades
-                  </>
-                )}
-              </button>
-            </div>
           </div>
 
           {loadingUniversities ? (
@@ -1358,6 +1297,21 @@ export default function AdminPanel({
                   placeholder="Ej: Colegio San Martín"
                   required
                 />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Código (se genera automáticamente)
+                </label>
+                <input
+                  type="text"
+                  value={createUniversityForm.codigo}
+                  onChange={(e) => setCreateUniversityForm(prev => ({...prev, codigo: e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 10)}))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-gray-50"
+                  placeholder="Se genera automáticamente"
+                  maxLength={10}
+                />
+                <p className="text-xs text-gray-500 mt-1">Máximo 10 caracteres alfanuméricos</p>
               </div>
 
               {/* Régimen (tipo) */}
