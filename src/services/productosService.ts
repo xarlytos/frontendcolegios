@@ -1,4 +1,4 @@
-import { api } from './api';
+import { apiService } from './api';
 
 export interface Producto {
   _id: string;
@@ -25,7 +25,7 @@ class ProductosService {
   // Obtener todos los productos
   async getProductos(): Promise<{ success: boolean; productos: Producto[] }> {
     try {
-      const response = await api.get('/productos');
+      const response = await apiService.get('/productos');
       return response.data;
     } catch (error) {
       console.error('Error obteniendo productos:', error);
@@ -36,7 +36,7 @@ class ProductosService {
   // Crear nuevo producto
   async crearProducto(data: CrearProductoRequest): Promise<{ success: boolean; message: string; producto: Producto }> {
     try {
-      const response = await api.post('/productos', data);
+      const response = await apiService.post('/productos', data);
       return response.data;
     } catch (error) {
       console.error('Error creando producto:', error);
@@ -47,7 +47,7 @@ class ProductosService {
   // Actualizar producto
   async actualizarProducto(id: string, data: ActualizarProductoRequest): Promise<{ success: boolean; message: string; producto: Producto }> {
     try {
-      const response = await api.put(`/productos/${id}`, data);
+      const response = await apiService.put(`/productos/${id}`, data);
       return response.data;
     } catch (error) {
       console.error('Error actualizando producto:', error);
@@ -58,7 +58,7 @@ class ProductosService {
   // Eliminar producto
   async eliminarProducto(id: string): Promise<{ success: boolean; message: string }> {
     try {
-      const response = await api.delete(`/productos/${id}`);
+      const response = await apiService.delete(`/productos/${id}`);
       return response.data;
     } catch (error) {
       console.error('Error eliminando producto:', error);
