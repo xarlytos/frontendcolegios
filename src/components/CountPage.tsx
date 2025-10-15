@@ -15,7 +15,14 @@ export default function CountPage({ onNavigateToContacts, currentUser }: CountPa
   const [selectedUniversidad, setSelectedUniversidad] = useState<string>('');
   const [selectedRegimen, setSelectedRegimen] = useState<string>('');
   const [selectedLocalidad, setSelectedLocalidad] = useState<string>('');
-  const [favoriteLocalidades, setFavoriteLocalidades] = useState<string[]>([]);
+  const [favoriteLocalidades, setFavoriteLocalidades] = useState<string[]>(() => {
+    // Cargar favoritos desde localStorage al inicializar
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('favoriteLocalidades');
+      return saved ? JSON.parse(saved) : [];
+    }
+    return [];
+  });
   const [allUniversidades, setAllUniversidades] = useState<UniversidadConEstadisticas[]>([]);
   const [loadingUniversidades, setLoadingUniversidades] = useState<boolean>(true);
   const [estadisticasGenerales, setEstadisticasGenerales] = useState<any>(null);
@@ -26,6 +33,13 @@ export default function CountPage({ onNavigateToContacts, currentUser }: CountPa
   const [filteredColegios, setFilteredColegios] = useState<string[]>([]);
 
   const { contacts: allContacts } = useContacts(); // ✅ USAR LOS CONTACTOS DEL HOOK
+
+  // Guardar favoritos en localStorage cuando cambien
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('favoriteLocalidades', JSON.stringify(favoriteLocalidades));
+    }
+  }, [favoriteLocalidades]);
 
   console.log('🎯 CountPage - Contactos del hook:', allContacts.length, allContacts);
 
@@ -630,15 +644,15 @@ export default function CountPage({ onNavigateToContacts, currentUser }: CountPa
                 {Object.values(localidadData.colegios).map(colegioData => (
                   <div key={colegioData.colegio} className="bg-white rounded-lg overflow-hidden border border-gray-200">
                     {/* Encabezado del colegio */}
-                    <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-4 py-3 flex items-center justify-between">
+                    <div className="bg-gradient-to-r from-blue-400 to-blue-500 px-4 py-3 flex items-center justify-between">
                       <div>
                         <h4 className="text-white text-lg font-semibold">
                           {colegioData.colegio}
-                          <span className="ml-2 text-sm font-normal text-blue-200">
+                          <span className="ml-2 text-sm font-normal text-blue-100">
                             ({colegioData.tipo === 'publica' ? 'Público' : 'Privado'})
                           </span>
                         </h4>
-                        <p className="text-blue-100 text-sm">Total contactos: {colegioData.total}</p>
+                        <p className="text-blue-50 text-sm">Total contactos: {colegioData.total}</p>
                       </div>
                       <button
                         onClick={() => onNavigateToContacts({ nombre_colegio: colegioData.colegio })}
