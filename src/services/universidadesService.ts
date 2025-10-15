@@ -86,24 +86,33 @@ class UniversidadesService {
     // Solicitar todas las universidades sin límite de paginación
     const url = includeInactive ? `${this.baseUrl}?activa=false&limit=999999` : `${this.baseUrl}?limit=999999`;
     const response = await apiService.get<{universidades: Universidad[], pagination: any}>(url);
-    return response.universidades;
+    return response.data?.universidades || [];
   }
 
   // Obtener una universidad por ID
   async getUniversidad(id: string): Promise<Universidad> {
     const response = await apiService.get<Universidad>(`${this.baseUrl}/${id}`);
+    if (!response.data) {
+      throw new Error('Universidad no encontrada');
+    }
     return response.data;
   }
 
   // Crear una nueva universidad
   async createUniversidad(data: CreateUniversidadData): Promise<Universidad> {
     const response = await apiService.post<Universidad>(this.baseUrl, data);
+    if (!response.data) {
+      throw new Error('Error al crear la universidad');
+    }
     return response.data;
   }
 
   // Actualizar una universidad
   async updateUniversidad(id: string, data: UpdateUniversidadData): Promise<Universidad> {
     const response = await apiService.put<Universidad>(`${this.baseUrl}/${id}`, data);
+    if (!response.data) {
+      throw new Error('Error al actualizar la universidad');
+    }
     return response.data;
   }
 
@@ -115,6 +124,9 @@ class UniversidadesService {
   // Buscar universidad por código
   async buscarPorCodigo(codigo: string): Promise<Universidad> {
     const response = await apiService.get<Universidad>(`${this.baseUrl}/codigo/${codigo}`);
+    if (!response.data) {
+      throw new Error('Universidad no encontrada');
+    }
     return response.data;
   }
 
@@ -123,7 +135,21 @@ class UniversidadesService {
     const response = await apiService.get<UniversidadesConEstadisticasResponse>(
       `${this.baseUrl}/estadisticas?activa=${activa}`
     );
-    return response;
+    if (!response.data) {
+      throw new Error('Error al obtener las estadísticas');
+    }
+    return response.data;
+  }
+
+  // Normalizar nombres de colegios existentes
+  async normalizarNombresColegios(): Promise<{success: boolean, contactosActualizados: number, errores: number, totalContactos: number}> {
+    const response = await apiService.post<{success: boolean, contactosActualizados: number, errores: number, totalContactos: number}>(
+      `${this.baseUrl}/normalizar-nombres`
+    );
+    if (!response.data) {
+      throw new Error('Error al normalizar los nombres');
+    }
+    return response.data;
   }
 }
 

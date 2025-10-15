@@ -69,6 +69,7 @@ export default function AdminPanel({
   });
   const [creatingTitulacion, setCreatingTitulacion] = useState(false);
   const [editingTitulacion, setEditingTitulacion] = useState(false);
+  const [normalizandoNombres, setNormalizandoNombres] = useState(false);
 
   // Debug useEffect para monitorear cambios en selectedPermissions
   useEffect(() => {
@@ -670,6 +671,27 @@ export default function AdminPanel({
     }
   };
 
+  const handleNormalizarNombres = async () => {
+    if (!confirm('¿Estás seguro de que quieres normalizar todos los nombres de colegios existentes? Esta acción convertirá todos los nombres a minúsculas y eliminará acentos. Esta acción no se puede deshacer.')) {
+      return;
+    }
+
+    setNormalizandoNombres(true);
+    try {
+      const response = await universidadesService.normalizarNombresColegios();
+      if (response.success) {
+        alert(`Normalización completada exitosamente. ${response.contactosActualizados} contactos actualizados de ${response.totalContactos} total. ${response.errores} errores.`);
+      } else {
+        alert('Error al normalizar los nombres de colegios');
+      }
+    } catch (error: any) {
+      console.error('Error normalizing names:', error);
+      alert(error.message || 'Error al normalizar los nombres de colegios');
+    } finally {
+      setNormalizandoNombres(false);
+    }
+  };
+
   return (
     <div className="p-6">
       <div className="mb-6">
@@ -899,10 +921,29 @@ export default function AdminPanel({
         <div className="space-y-4">
           <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-4">
             <h3 className="font-medium text-indigo-900 mb-2">Gestión de Colegios</h3>
-            <p className="text-sm text-indigo-700">
+            <p className="text-sm text-indigo-700 mb-4">
               Visualiza todos los colegios disponibles en el sistema. 
               Total de colegios: {universities.length}
             </p>
+            <div className="flex gap-2">
+              <button
+                onClick={handleNormalizarNombres}
+                disabled={normalizandoNombres}
+                className="flex items-center px-3 py-2 bg-orange-600 text-white rounded-md hover:bg-orange-700 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {normalizandoNombres ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Normalizando...
+                  </>
+                ) : (
+                  <>
+                    <Database className="w-4 h-4 mr-2" />
+                    Normalizar Nombres de Colegios
+                  </>
+                )}
+              </button>
+            </div>
           </div>
 
           {loadingUniversities ? (

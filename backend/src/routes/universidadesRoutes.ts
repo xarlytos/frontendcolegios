@@ -16,6 +16,11 @@ router.get('/estadisticas',
   UniversidadesController.obtenerUniversidadesConEstadisticas
 );
 
+// Normalizar nombres de colegios existentes (solo admins)
+router.post('/normalizar-nombres', 
+  UniversidadesController.normalizarNombresColegios
+);
+
 // Buscar universidad por código (debe ir antes de /:id para evitar conflictos)
 router.get('/codigo/:codigo', UniversidadesController.buscarPorCodigo);
 

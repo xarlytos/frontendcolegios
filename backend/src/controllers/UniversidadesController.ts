@@ -123,6 +123,83 @@ export class UniversidadesController {
       .trim();
   }
 
+  // Normalizar todos los nombres de colegios existentes
+  static async normalizarNombresColegios(req: AuthRequest, res: Response) {
+    try {
+      // Solo admins pueden normalizar nombres
+      if (req.user?.rol !== RolUsuario.ADMIN) {
+        return res.status(403).json({ 
+          error: 'No tienes permisos para normalizar nombres de colegios' 
+        });
+      }
+
+      console.log('🔍 Iniciando normalización de nombres de colegios...');
+      
+      // Obtener todos los contactos
+      const contactos = await Contacto.find({});
+      console.log(`📊 Total de contactos encontrados: ${contactos.length}`);
+      
+      let contactosActualizados = 0;
+      let errores = 0;
+      const cambios: Array<{contactoId: string, nombreAnterior: string, nombreNuevo: string}> = [];
+      
+      for (const contacto of contactos) {
+        try {
+          const nombreAnterior = contacto.nombreColegio || '';
+          const nombreNormalizado = this.normalizeName(nombreAnterior);
+          
+          // Solo actualizar si el nombre cambió al normalizar
+          if (nombreAnterior !== nombreNormalizado && nombreNormalizado !== '') {
+            console.log(`🔄 Normalizando: "${nombreAnterior}" → "${nombreNormalizado}"`);
+            
+            contacto.nombreColegio = nombreNormalizado;
+            await contacto.save();
+            
+            contactosActualizados++;
+            cambios.push({
+              contactoId: contacto._id.toString(),
+              nombreAnterior,
+              nombreNuevo: nombreNormalizado
+            });
+          }
+        } catch (error) {
+          console.error(`❌ Error normalizando contacto ${contacto._id}:`, error);
+          errores++;
+        }
+      }
+      
+      console.log(`✅ Normalización completada: ${contactosActualizados} contactos actualizados, ${errores} errores`);
+      
+      // Registrar en auditoría
+      await AuditLog.create({
+        usuarioId: new mongoose.Types.ObjectId(req.user!.userId),
+        accion: AccionAudit.UPDATE,
+        entidad: EntidadAudit.CONTACTO,
+        entidadId: 'BULK_NORMALIZATION',
+        despues: {
+          accion: 'NORMALIZACION_MASIVA_NOMBRES_COLEGIOS',
+          contactosActualizados,
+          errores,
+          cambios: cambios.slice(0, 10) // Solo los primeros 10 cambios en el log
+        }
+      });
+
+      res.json({
+        success: true,
+        message: 'Normalización de nombres completada',
+        contactosActualizados,
+        errores,
+        totalContactos: contactos.length
+      });
+    } catch (error) {
+      console.error('Error normalizando nombres de colegios:', error);
+      res.status(500).json({ 
+        success: false,
+        error: 'Error interno del servidor' 
+      });
+    }
+  }
+
   // Crear nueva universidad
   static async crearUniversidad(req: AuthRequest, res: Response) {
     try {
