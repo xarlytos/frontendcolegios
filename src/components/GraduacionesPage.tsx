@@ -285,7 +285,7 @@ export default function GraduacionesPage({ currentUser }: GraduacionesPageProps)
     } else {
       // Si se deselecciona el año, limpiar la configuración
       setMostrarContactos(false);
-      setColegios([]);
+      setGraduaciones([]);
       setTotalContactos(0);
     }
   };
@@ -700,7 +700,7 @@ export default function GraduacionesPage({ currentUser }: GraduacionesPageProps)
         </div>
       )}
 
-      {/* Lista de graduaciones - Solo mostrar si es admin o si los contactos están visibles */}
+      {/* Tabla de graduaciones - Solo mostrar si es admin o si los contactos están visibles */}
       {selectedAnio && !loadingGraduaciones && (isAdmin || mostrarContactos) && (
         <div className="mb-8">
           <h2 className="text-xl font-bold text-gray-900 mb-4">Graduaciones por Colegio</h2>
@@ -715,83 +715,118 @@ export default function GraduacionesPage({ currentUser }: GraduacionesPageProps)
               )}
             </div>
           ) : (
-            <div className="space-y-6">
-              {filteredGraduaciones.map((graduacion) => (
-                <div key={graduacion.id} className="rounded-lg overflow-hidden border border-gray-200">
-                  {/* Encabezado azul del colegio */}
-                  <div className="bg-gradient-to-r from-blue-700 to-blue-800 px-6 py-4 flex items-center justify-between">
-                    <div>
-                      <h3 className="text-white text-lg font-bold">{graduacion.nombreColegio}</h3>
-                      <p className="text-blue-100 text-sm">Total contactos: {graduacion.totalContactos}</p>
-                    </div>
-                    <div className="flex items-center space-x-3">
-                      <button
-                        onClick={() => abrirModalContactos(graduacion.contactos, graduacion.nombreColegio)}
-                        className="flex items-center px-3 py-1 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-500 transition-colors"
-                      >
-                        <Eye className="w-4 h-4 mr-1" />
-                        Ver Contactos
-                      </button>
-                      <div className="text-blue-100 text-sm">
-                        Año: {selectedAnio}
-                      </div>
-                    </div>
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+              {/* Información de la tabla */}
+              <div className="px-6 py-3 bg-gray-50 border-b border-gray-200">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm text-gray-600">
+                    Mostrando {filteredGraduaciones.length} de {graduaciones.length} colegios
+                  </p>
+                  <div className="text-sm text-gray-500">
+                    Año: {selectedAnio}
                   </div>
-                  
-                  {/* Contenido con campos editables */}
-                  <div className="bg-white">
-                    <div className="p-6">
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                </div>
+              </div>
+              
+              {/* Tabla estilo Excel */}
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  {/* Encabezados de la tabla */}
+                  <thead className="bg-blue-50 border-b-2 border-blue-200">
+                    <tr>
+                      <th className="px-6 py-4 text-left text-sm font-semibold text-blue-900 border-r border-blue-200">
+                        Nombre Colegio
+                      </th>
+                      <th className="px-6 py-4 text-left text-sm font-semibold text-blue-900 border-r border-blue-200">
+                        Total Contactos
+                      </th>
+                      <th className="px-6 py-4 text-left text-sm font-semibold text-blue-900 border-r border-blue-200">
+                        Responsable
+                      </th>
+                      <th className="px-6 py-4 text-left text-sm font-semibold text-blue-900 border-r border-blue-200">
+                        Tipo Producto
+                      </th>
+                      <th className="px-6 py-4 text-left text-sm font-semibold text-blue-900 border-r border-blue-200">
+                        Previsión
+                      </th>
+                      <th className="px-6 py-4 text-left text-sm font-semibold text-blue-900 border-r border-blue-200">
+                        Estado
+                      </th>
+                      <th className="px-6 py-4 text-left text-sm font-semibold text-blue-900 border-r border-blue-200">
+                        Observaciones
+                      </th>
+                      <th className="px-6 py-4 text-left text-sm font-semibold text-blue-900">
+                        Acciones
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {filteredGraduaciones.map((graduacion, index) => (
+                      <tr key={graduacion.id} className={`hover:bg-blue-50 transition-colors ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}>
+                        {/* Nombre Colegio */}
+                        <td className="px-6 py-4 whitespace-nowrap border-r border-gray-200">
+                          <div className="text-sm font-medium text-gray-900">
+                            {graduacion.nombreColegio}
+                          </div>
+                        </td>
+                        
+                        {/* Total Contactos */}
+                        <td className="px-6 py-4 whitespace-nowrap border-r border-gray-200">
+                          <div className="flex items-center">
+                            <span className="text-sm text-gray-900 font-medium">
+                              {graduacion.totalContactos}
+                            </span>
+                            <button
+                              onClick={() => abrirModalContactos(graduacion.contactos, graduacion.nombreColegio)}
+                              className="ml-2 flex items-center px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-md hover:bg-blue-200 transition-colors"
+                            >
+                              <Eye className="w-3 h-3 mr-1" />
+                              Ver
+                            </button>
+                          </div>
+                        </td>
+                        
                         {/* Responsable */}
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Responsable
-                          </label>
+                        <td className="px-6 py-4 whitespace-nowrap border-r border-gray-200">
                           {editingId === graduacion.id ? (
                             <input
                               type="text"
                               value={editData.responsable}
                               onChange={(e) => setEditData(prev => ({ ...prev, responsable: e.target.value }))}
-                              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                              className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                               placeholder="Nombre del responsable"
                             />
                           ) : (
-                            <div className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-md text-gray-900">
+                            <div className="text-sm text-gray-900">
                               {graduacion.responsable || 'Sin asignar'}
                             </div>
                           )}
-                        </div>
-
-                        {/* Tipo de Producto */}
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Tipo de Producto
-                          </label>
+                        </td>
+                        
+                        {/* Tipo Producto */}
+                        <td className="px-6 py-4 whitespace-nowrap border-r border-gray-200">
                           {editingId === graduacion.id ? (
                             <input
                               type="text"
                               value={editData.tipoProducto}
                               onChange={(e) => setEditData(prev => ({ ...prev, tipoProducto: e.target.value }))}
-                              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                              className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                               placeholder="Tipo de producto"
                             />
                           ) : (
-                            <div className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-md text-gray-900">
+                            <div className="text-sm text-gray-900">
                               {graduacion.tipoProducto || 'Sin especificar'}
                             </div>
                           )}
-                        </div>
-
+                        </td>
+                        
                         {/* Previsión */}
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Previsión
-                          </label>
+                        <td className="px-6 py-4 whitespace-nowrap border-r border-gray-200">
                           {editingId === graduacion.id ? (
                             <select
                               value={editData.prevision}
                               onChange={(e) => setEditData(prev => ({ ...prev, prevision: e.target.value }))}
-                              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                              className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                             >
                               <option value="">Seleccionar previsión</option>
                               <option value="Buena">Buena</option>
@@ -799,30 +834,27 @@ export default function GraduacionesPage({ currentUser }: GraduacionesPageProps)
                               <option value="Mala">Mala</option>
                             </select>
                           ) : (
-                            <div className={`px-3 py-2 border border-gray-200 rounded-md text-gray-900 font-medium ${
+                            <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
                               graduacion.prevision === 'Buena' 
-                                ? 'bg-green-100 text-green-800 border-green-300' 
+                                ? 'bg-green-100 text-green-800' 
                                 : graduacion.prevision === 'Regular' 
-                                ? 'bg-yellow-100 text-yellow-800 border-yellow-300' 
+                                ? 'bg-yellow-100 text-yellow-800' 
                                 : graduacion.prevision === 'Mala' 
-                                ? 'bg-red-100 text-red-800 border-red-300' 
-                                : 'bg-gray-50'
+                                ? 'bg-red-100 text-red-800' 
+                                : 'bg-gray-100 text-gray-800'
                             }`}>
                               {graduacion.prevision || 'Sin especificar'}
-                            </div>
+                            </span>
                           )}
-                        </div>
-
+                        </td>
+                        
                         {/* Estado */}
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Estado
-                          </label>
+                        <td className="px-6 py-4 whitespace-nowrap border-r border-gray-200">
                           {editingId === graduacion.id ? (
                             <select
                               value={editData.estado}
                               onChange={(e) => setEditData(prev => ({ ...prev, estado: e.target.value }))}
-                              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                              className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                             >
                               <option value="">Seleccionar estado</option>
                               <option value="NO CONTACTADO">NO CONTACTADO</option>
@@ -834,66 +866,63 @@ export default function GraduacionesPage({ currentUser }: GraduacionesPageProps)
                               <option value="GANADO">GANADO</option>
                             </select>
                           ) : (
-                            <div className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-md text-gray-900">
+                            <div className="text-sm text-gray-900">
                               {graduacion.estado || 'Sin especificar'}
                             </div>
                           )}
-                        </div>
-
+                        </td>
+                        
                         {/* Observaciones */}
-                        <div className="md:col-span-2 lg:col-span-3">
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Observaciones
-                          </label>
+                        <td className="px-6 py-4 border-r border-gray-200">
                           {editingId === graduacion.id ? (
                             <textarea
                               value={editData.observaciones}
                               onChange={(e) => setEditData(prev => ({ ...prev, observaciones: e.target.value }))}
-                              rows={3}
-                              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                              rows={2}
+                              className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                               placeholder="Observaciones adicionales"
                             />
                           ) : (
-                            <div className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-md text-gray-900 min-h-[76px]">
+                            <div className="text-sm text-gray-900 max-w-xs truncate" title={graduacion.observaciones || 'Sin observaciones'}>
                               {graduacion.observaciones || 'Sin observaciones'}
                             </div>
                           )}
-                        </div>
-                      </div>
-
-                      {/* Botones de acción */}
-                      <div className="mt-6 flex justify-end space-x-3">
-                        {editingId === graduacion.id ? (
-                          <>
+                        </td>
+                        
+                        {/* Acciones */}
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                          {editingId === graduacion.id ? (
+                            <div className="flex space-x-2">
+                              <button
+                                onClick={() => guardarCambios(graduacion.id)}
+                                className="text-green-600 hover:text-green-900 flex items-center"
+                              >
+                                <Save className="w-4 h-4 mr-1" />
+                                Guardar
+                              </button>
+                              <button
+                                onClick={cancelarEdicion}
+                                className="text-gray-600 hover:text-gray-900 flex items-center"
+                              >
+                                <XIcon className="w-4 h-4 mr-1" />
+                                Cancelar
+                              </button>
+                            </div>
+                          ) : (
                             <button
-                              onClick={() => guardarCambios(graduacion.id)}
-                              className="flex items-center px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
+                              onClick={() => iniciarEdicion(graduacion)}
+                              className="text-blue-600 hover:text-blue-900 flex items-center"
                             >
-                              <Save className="w-4 h-4 mr-2" />
-                              Guardar
+                              <Edit3 className="w-4 h-4 mr-1" />
+                              Editar
                             </button>
-                            <button
-                              onClick={cancelarEdicion}
-                              className="flex items-center px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors"
-                            >
-                              <XIcon className="w-4 h-4 mr-2" />
-                              Cancelar
-                            </button>
-                          </>
-                        ) : (
-                          <button
-                            onClick={() => iniciarEdicion(graduacion)}
-                            className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
-                          >
-                            <Edit3 className="w-4 h-4 mr-2" />
-                            Editar
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))}
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
         </div>
