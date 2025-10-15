@@ -72,9 +72,9 @@ export default function ExcelImportModal({ isOpen, onClose, onImport, existingCo
           await getAllUsers();
           console.log('👥 Usuarios obtenidos desde useAuth:', users);
           
-          // Filtrar solo comerciales activos
+          // Incluir todos los usuarios activos (comerciales y admin)
           const comercialesActivos = users.filter(user => 
-            user.role === 'comercial' && user.activo === true
+            user.activo === true
           );
           
           setComercialesUsuarios(comercialesActivos);
