@@ -197,9 +197,20 @@ export default function CountPage({ onNavigateToContacts, currentUser }: CountPa
     return years.sort((a, b) => a - b);
   }, [filteredContacts]);
 
-  // NUEVO: estadísticas por colegio y por año de nacimiento
-  const colegiosStats = useMemo(() => {
-    const stats: Record<string, { colegio: string; tipo: string; total: number; porAnio: Record<number, number>; porComercial: Record<string, number> }> = {};
+  // NUEVO: estadísticas agrupadas por localidad
+  const localidadesStats = useMemo(() => {
+    const localidades: Record<string, { 
+      localidad: string; 
+      totalContactos: number; 
+      totalColegios: number; 
+      colegios: Record<string, { 
+        colegio: string; 
+        tipo: string; 
+        total: number; 
+        porAnio: Record<number, number>; 
+        porComercial: Record<string, number> 
+      }> 
+    }> = {};
     
     // Filtrar universidades por régimen y localidad si están seleccionados
     const universidadesFiltradas = allUniversidades.filter(universidad => {
@@ -209,24 +220,46 @@ export default function CountPage({ onNavigateToContacts, currentUser }: CountPa
       return true;
     });
     
-    // Inicializar solo los colegios que pasan el filtro de régimen
+    // Inicializar localidades y colegios
     universidadesFiltradas.forEach(universidad => {
-      stats[universidad.nombre] = { 
+      const localidad = universidad.ciudad || 'Sin localidad';
+      
+      if (!localidades[localidad]) {
+        localidades[localidad] = {
+          localidad,
+          totalContactos: 0,
+          totalColegios: 0,
+          colegios: {}
+        };
+      }
+      
+      localidades[localidad].colegios[universidad.nombre] = { 
         colegio: universidad.nombre, 
         tipo: universidad.tipo || 'publica',
         total: 0, 
         porAnio: {}, 
         porComercial: {} 
       };
+      localidades[localidad].totalColegios += 1;
     });
     
-    // Luego, agregar los datos de contactos filtrados
+    // Agregar datos de contactos filtrados
     filteredContacts.forEach(contact => {
       const colegio = contact.nombre_colegio || 'Sin colegio';
-      if (!stats[colegio]) {
-        // Buscar el tipo de la universidad
-        const universidad = allUniversidades.find(uni => uni.nombre === colegio);
-        stats[colegio] = { 
+      const universidad = allUniversidades.find(uni => uni.nombre === colegio);
+      const localidad = universidad?.ciudad || 'Sin localidad';
+      
+      if (!localidades[localidad]) {
+        localidades[localidad] = {
+          localidad,
+          totalContactos: 0,
+          totalColegios: 0,
+          colegios: {}
+        };
+      }
+      
+      if (!localidades[localidad].colegios[colegio]) {
+        localidades[localidad].colegios[colegio] = { 
           colegio, 
           tipo: universidad?.tipo || 'publica',
           total: 0, 
@@ -234,23 +267,30 @@ export default function CountPage({ onNavigateToContacts, currentUser }: CountPa
           porComercial: {} 
         };
       }
-      stats[colegio].total += 1;
+      
+      localidades[localidad].colegios[colegio].total += 1;
+      localidades[localidad].totalContactos += 1;
+      
       if (contact.año_nacimiento) {
-        stats[colegio].porAnio[contact.año_nacimiento] = (stats[colegio].porAnio[contact.año_nacimiento] || 0) + 1;
+        localidades[localidad].colegios[colegio].porAnio[contact.año_nacimiento] = 
+          (localidades[localidad].colegios[colegio].porAnio[contact.año_nacimiento] || 0) + 1;
       }
+      
       const comercialNombre = contact.comercial_nombre || contact.comercial || 'Sin asignar';
-      stats[colegio].porComercial[comercialNombre] = (stats[colegio].porComercial[comercialNombre] || 0) + 1;
+      localidades[localidad].colegios[colegio].porComercial[comercialNombre] = 
+        (localidades[localidad].colegios[colegio].porComercial[comercialNombre] || 0) + 1;
     });
     
-    return Object.values(stats).sort((a, b) => a.colegio.localeCompare(b.colegio, 'es', { sensitivity: 'base' }));
+    // Convertir a array y ordenar por localidad
+    return Object.values(localidades).sort((a, b) => a.localidad.localeCompare(b.localidad, 'es', { sensitivity: 'base' }));
   }, [filteredContacts, allUniversidades, selectedRegimen, selectedLocalidad]);
   
 
  
   const totalContacts = filteredContacts.length;
   const totalUniversidades = uniqueUniversidades.length;
-  const totalTitulaciones = 0;
-  console.log('📈 Totales calculados:', { totalContacts, totalUniversidades, totalTitulaciones });
+  const totalLocalidades = localidadesStats.length;
+  console.log('📈 Totales calculados:', { totalContacts, totalUniversidades, totalLocalidades });
 
   const handleUniversityClick = (universidad: string) => {
     onNavigateToContacts({
@@ -444,85 +484,107 @@ export default function CountPage({ onNavigateToContacts, currentUser }: CountPa
           </div>
           
           <div>
-            <h3 className="text-sm font-medium opacity-90">Colegios</h3>
-            <p className="text-2xl font-bold">{uniqueUniversidades.length}</p>
+            <h3 className="text-sm font-medium opacity-90">Localidades</h3>
+            <p className="text-2xl font-bold">{totalLocalidades}</p>
           </div>
           <div>
-            <h3 className="text-sm font-medium opacity-90">Total Alumnos</h3>
-            <p className="text-2xl font-bold">{filteredContacts.length}</p>
+            <h3 className="text-sm font-medium opacity-90">Colegios</h3>
+            <p className="text-2xl font-bold">{totalUniversidades}</p>
           </div>
         </div>
       </div>
 
-      {/* Contactos por Colegio */}
+      {/* Contactos por Localidad */}
       <div className="mb-8">
-        <h2 className="text-xl font-bold text-gray-900 mb-4">Contactos por Colegio</h2>
-        {colegiosStats.length === 0 && (
+        <h2 className="text-xl font-bold text-gray-900 mb-4">Contactos por Localidad</h2>
+        {localidadesStats.length === 0 && (
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 text-center text-gray-500">
             No hay datos para mostrar
           </div>
         )}
-        <div className="space-y-6">
-          {colegiosStats.map(row => (
-            <div key={row.colegio} className="rounded-lg overflow-hidden border border-gray-200">
-              {/* Encabezado azul del colegio */}
-              <div className="bg-gradient-to-r from-blue-700 to-blue-800 px-6 py-4 flex items-center justify-between">
-                <div>
-                  <h3 className="text-white text-lg font-bold">
-                    {row.colegio}
-                    <span className="ml-2 text-sm font-normal text-blue-200">
-                      ({row.tipo === 'publica' ? 'Público' : 'Privado'})
-                    </span>
-                  </h3>
-                  <p className="text-blue-100 text-sm">Total contactos: {row.total}</p>
+        <div className="space-y-8">
+          {localidadesStats.map(localidadData => (
+            <div key={localidadData.localidad} className="rounded-lg overflow-hidden border border-gray-200">
+              {/* Encabezado principal de la localidad */}
+              <div className="bg-gradient-to-r from-blue-800 to-blue-900 px-6 py-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-white text-xl font-bold">{localidadData.localidad}</h3>
+                    <p className="text-blue-100 text-sm">
+                      {localidadData.totalContactos} contactos disponibles en {localidadData.totalColegios} colegios
+                    </p>
+                  </div>
                 </div>
-                <button
-                  onClick={() => onNavigateToContacts({ nombre_colegio: row.colegio })}
-                  className="inline-flex items-center px-3 py-1.5 text-xs font-medium text-white bg-blue-500 hover:bg-blue-600 rounded-md transition-colors"
-                >
-                  Ver contactos
-                </button>
               </div>
-              {/* Contenido con columnas por año de nacimiento y comerciales */}
-              <div className="bg-white relative overflow-x-auto">
-                <div className="px-6 py-3 border-b border-gray-200 relative">
-                  <div className="grid gap-4" style={{ gridTemplateColumns: `1fr ${birthYears.map(() => 'minmax(60px, 1fr)').join(' ')} 1fr` }}>
-                    <div className="text-sm font-medium text-gray-700">Año de nacimiento</div>
-                    {birthYears.map(year => (
-                      <div key={year} className="text-sm font-medium text-gray-700 text-center">{year}</div>
-                    ))}
-                    <div className="text-sm font-medium text-gray-700 text-right sticky right-0 bg-white z-20 pl-0 pr-0 border-l border-gray-200">Comerciales</div>
-                  </div>
-                </div>
-                <div className="px-6 py-4 relative">
-                  <div className="grid gap-4 items-center" style={{ gridTemplateColumns: `1fr ${birthYears.map(() => 'minmax(60px, 1fr)').join(' ')} 1fr` }}>
-                    <div className="text-sm font-medium text-gray-900">{row.total} contactos</div>
-                    {birthYears.map(year => (
-                      <div key={year} className="text-center">
-                        {row.porAnio[year] ? (
-                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">{row.porAnio[year]}</span>
-                        ) : (
-                          <span className="text-gray-300">0</span>
-                        )}
+              
+              {/* Colegios de la localidad */}
+              <div className="space-y-4 p-6 bg-gray-50">
+                {Object.values(localidadData.colegios).map(colegioData => (
+                  <div key={colegioData.colegio} className="bg-white rounded-lg overflow-hidden border border-gray-200">
+                    {/* Encabezado del colegio */}
+                    <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-4 py-3 flex items-center justify-between">
+                      <div>
+                        <h4 className="text-white text-lg font-semibold">
+                          {colegioData.colegio}
+                          <span className="ml-2 text-sm font-normal text-blue-200">
+                            ({colegioData.tipo === 'publica' ? 'Público' : 'Privado'})
+                          </span>
+                        </h4>
+                        <p className="text-blue-100 text-sm">Total contactos: {colegioData.total}</p>
                       </div>
-                    ))}
-                    <div className="text-sm text-right sticky right-0 bg-white z-20 pl-0 pr-0 border-l border-gray-200">
-                      <div className="flex flex-col gap-1 items-end">
-                        {Object.entries(row.porComercial)
-                          .filter(([, cantidad]) => cantidad > 0)
-                          .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], 'es', { sensitivity: 'base' }))
-                          .map(([nombre, cantidad]) => (
-                            <span key={nombre} className="inline-flex w-fit items-center px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
-                              {nombre} ({cantidad})
-                            </span>
-                          ))}
-                      </div>
-                      {Object.entries(row.porComercial).filter(([, cantidad]) => cantidad > 0).length === 0 && (
-                        <span className="text-gray-400 text-sm">Sin asignar</span>
-                      )}
+                      <button
+                        onClick={() => onNavigateToContacts({ nombre_colegio: colegioData.colegio })}
+                        className="inline-flex items-center px-3 py-1.5 text-xs font-medium text-white bg-blue-500 hover:bg-blue-600 rounded-md transition-colors"
+                      >
+                        Ver contactos
+                      </button>
                     </div>
+                    
+                    {/* Tabla de datos del colegio */}
+                    {colegioData.total > 0 && (
+                      <div className="bg-white relative overflow-x-auto">
+                        <div className="px-4 py-3 border-b border-gray-200 relative">
+                          <div className="grid gap-4" style={{ gridTemplateColumns: `1fr ${birthYears.map(() => 'minmax(60px, 1fr)').join(' ')} 1fr` }}>
+                            <div className="text-sm font-medium text-gray-700">Año de nacimiento</div>
+                            {birthYears.map(year => (
+                              <div key={year} className="text-sm font-medium text-gray-700 text-center">{year}</div>
+                            ))}
+                            <div className="text-sm font-medium text-gray-700 text-right sticky right-0 bg-white z-20 pl-0 pr-0 border-l border-gray-200">Comerciales</div>
+                          </div>
+                        </div>
+                        <div className="px-4 py-3 relative">
+                          <div className="grid gap-4 items-center" style={{ gridTemplateColumns: `1fr ${birthYears.map(() => 'minmax(60px, 1fr)').join(' ')} 1fr` }}>
+                            <div className="text-sm font-medium text-gray-900">{colegioData.total} contactos</div>
+                            {birthYears.map(year => (
+                              <div key={year} className="text-center">
+                                {colegioData.porAnio[year] ? (
+                                  <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">{colegioData.porAnio[year]}</span>
+                                ) : (
+                                  <span className="text-gray-300">0</span>
+                                )}
+                              </div>
+                            ))}
+                            <div className="text-sm text-right sticky right-0 bg-white z-20 pl-0 pr-0 border-l border-gray-200">
+                              <div className="flex flex-col gap-1 items-end">
+                                {Object.entries(colegioData.porComercial)
+                                  .filter(([, cantidad]) => cantidad > 0)
+                                  .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], 'es', { sensitivity: 'base' }))
+                                  .map(([nombre, cantidad]) => (
+                                    <span key={nombre} className="inline-flex w-fit items-center px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                                      {nombre} ({cantidad})
+                                    </span>
+                                  ))}
+                              </div>
+                              {Object.entries(colegioData.porComercial).filter(([, cantidad]) => cantidad > 0).length === 0 && (
+                                <span className="text-gray-400 text-sm">Sin asignar</span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
-                </div>
+                ))}
               </div>
             </div>
           ))}
