@@ -5,7 +5,7 @@ import configuracionService from '../services/configuracionService';
 import productosService, { Producto } from '../services/productosService';
 import { useAuth } from '../hooks/useAuth';
 import ContactosModal from './ContactosModal';
-import ProductosModal from './ProductosModal';
+import ProductosManagementModal from './ProductosManagementModal';
 
 interface GraduacionesPageProps {
   currentUser?: any;
@@ -1079,8 +1079,8 @@ export default function GraduacionesPage({ currentUser }: GraduacionesPageProps)
         nombreColegio={contactosModal.nombreColegio}
       />
 
-      {/* Modal de productos */}
-      <ProductosModal
+      {/* Modal de gestión de productos */}
+      <ProductosManagementModal
         isOpen={productosModal}
         onClose={cerrarModalProductos}
         onProductoSeleccionado={(producto) => {

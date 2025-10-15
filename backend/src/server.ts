@@ -10,6 +10,7 @@ import universidadesRoutes from './routes/universidadesRoutes';
 import titulacionesRoutes from './routes/titulacionesRoutes';
 import graduacionesRoutes from './routes/graduacionesRoutes';
 import configuracionRoutes from './routes/configuracionRoutes';
+import productosRoutes from './routes/productosRoutes';
 import { errorHandler } from './middleware/errorHandler';
 import { authenticateToken } from './middleware/auth';
 
@@ -62,6 +63,7 @@ app.use('/api/universidades', authenticateToken, universidadesRoutes);
 app.use('/api/titulaciones', authenticateToken, titulacionesRoutes);
 app.use('/api/graduaciones', authenticateToken, graduacionesRoutes);
 app.use('/api/configuracion', authenticateToken, configuracionRoutes);
+app.use('/api/productos', authenticateToken, productosRoutes);
 
 
 // Middleware de manejo de errores
