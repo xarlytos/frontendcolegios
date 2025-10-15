@@ -109,12 +109,19 @@ class UniversidadesService {
   }
 
   // Crear una nueva universidad
-  async createUniversidad(data: CreateUniversidadData): Promise<Universidad> {
-    const response = await apiService.post<Universidad>(this.baseUrl, data);
-    if (!response.data) {
+  async createUniversidad(data: CreateUniversidadData): Promise<any> {
+    const response = await apiService.post<any>(this.baseUrl, data) as any;
+    console.log('📥 Respuesta completa del servidor:', response);
+    
+    // El backend devuelve { message, universidad, contactosAsociados }
+    if (!response.universidad) {
+      console.error('❌ No se encontró universidad en la respuesta:', response);
       throw new Error('Error al crear la universidad');
     }
-    return response.data;
+    
+    console.log('✅ Universidad creada exitosamente:', response.universidad);
+    // Devolver la respuesta completa para que el componente pueda acceder a contactosAsociados
+    return response;
   }
 
   // Actualizar una universidad

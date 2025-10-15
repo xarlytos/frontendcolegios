@@ -6,7 +6,7 @@ import { Contacto } from '../models/Contacto';
 import { Usuario } from '../models/Usuario';
 import { JerarquiaUsuarios } from '../models/JerarquiaUsuarios'; // RESTAURADO
 import { AuditLog, EntidadAudit, AccionAudit } from '../models/AuditLog';
-import { AuthRequest, RolUsuario } from '../types'; // Fixed: Import both fsrom '../types'
+import { AuthRequest, RolUsuario } from '../types';
 
 export class UniversidadesController {
   // Obtener todas las universidades
@@ -216,10 +216,22 @@ export class UniversidadesController {
   // Crear nueva universidad
   static async crearUniversidad(req: AuthRequest, res: Response) {
     try {
+      // Verificar que el usuario esté autenticado
+      if (!req.user) {
+        console.log('❌ Usuario no autenticado');
+        return res.status(401).json({ 
+          error: 'Usuario no autenticado' 
+        });
+      }
+
       const { codigo, nombre, tipo, ciudad, activa } = req.body;
 
+      console.log('🔍 Datos recibidos para crear universidad:', { codigo, nombre, tipo, ciudad, activa });
+      console.log('🔍 Usuario que hace la petición:', { userId: req.user.userId, rol: req.user.rol });
+
       // Solo admins pueden crear universidades
-      if (req.user?.rol !== RolUsuario.ADMIN) {
+      if (req.user.rol !== RolUsuario.ADMIN) {
+        console.log('❌ Usuario no es administrador:', req.user.rol);
         return res.status(403).json({ 
           error: 'No tienes permisos para crear universidades' 
         });
@@ -227,36 +239,27 @@ export class UniversidadesController {
 
       // Validaciones
       if (!codigo || !nombre || !tipo || !ciudad) {
+        console.log('❌ Validación fallida - Campos faltantes:', { codigo, nombre, tipo, ciudad });
         return res.status(400).json({ 
           error: 'Código, nombre, tipo y ciudad son obligatorios' 
         });
       }
 
-      // Verificar que el usuario sea administrador
-      console.log('🔍 Verificando rol de usuario:', {
-        user: req.user,
-        rol: req.user?.rol,
-        esAdmin: req.user?.rol === RolUsuario.ADMIN
-      });
-      
-      if (req.user?.rol !== RolUsuario.ADMIN) {
-        console.log('❌ Usuario no es administrador:', req.user?.rol);
-        return res.status(403).json({ 
-          error: 'Solo los administradores pueden crear universidades' 
-        });
-      }
-      
       console.log('✅ Usuario es administrador, continuando...');
 
       // Verificar que el código no exista
+      console.log('🔍 Verificando si el código ya existe:', codigo);
       const universidadExistente = await Universidad.findOne({ codigo });
       if (universidadExistente) {
+        console.log('❌ Código ya existe:', universidadExistente.nombre);
         return res.status(400).json({ 
           error: 'Ya existe una universidad con este código' 
         });
       }
+      console.log('✅ Código disponible');
 
       // Crear universidad
+      console.log('🔍 Creando nueva universidad con datos:', { codigo, nombre, tipo, ciudad });
       const nuevaUniversidad = new Universidad({
         codigo,
         nombre,
@@ -266,54 +269,88 @@ export class UniversidadesController {
         creadoPor: new mongoose.Types.ObjectId(req.user.userId)
       });
 
+      console.log('💾 Guardando universidad en la base de datos...');
       await nuevaUniversidad.save();
+      console.log('✅ Universidad guardada exitosamente:', nuevaUniversidad._id);
 
-      // NUEVO: Asociar contactos existentes con el mismo nombre normalizado
+      // Asociar contactos existentes con el mismo nombre normalizado
       console.log('🔍 Buscando contactos para asociar con el nuevo colegio...');
-      const nombreNormalizado = this.normalizeName(nombre);
-      console.log('🔍 Nombre normalizado:', nombreNormalizado);
+      let contactosAsociados: string[] = [];
       
-      // Buscar contactos que tengan un nombre de colegio que coincida al normalizar
-      const contactosParaAsociar = await Contacto.find({});
-      const contactosAsociados: string[] = [];
-      
-      for (const contacto of contactosParaAsociar) {
-        const nombreColegioNormalizado = this.normalizeName(contacto.nombreColegio || '');
-        if (nombreColegioNormalizado === nombreNormalizado && contacto.nombreColegio !== nombre) {
-          console.log(`🔗 Asociando contacto ${contacto.nombreCompleto} (${contacto.nombreColegio}) con nuevo colegio ${nombre}`);
-          
-          // Actualizar el nombre del colegio en el contacto
-          contacto.nombreColegio = nombre;
-          await contacto.save();
-          contactosAsociados.push(contacto._id.toString());
+      try {
+        const nombreNormalizado = this.normalizeName(nombre);
+        console.log('🔍 Nombre normalizado:', nombreNormalizado);
+        
+        // Buscar contactos que tengan un nombre de colegio que coincida al normalizar
+        const contactosParaAsociar = await Contacto.find({});
+        console.log(`🔍 Encontrados ${contactosParaAsociar.length} contactos para revisar`);
+        
+        for (const contacto of contactosParaAsociar) {
+          try {
+            const nombreColegioNormalizado = this.normalizeName(contacto.nombreColegio || '');
+            if (nombreColegioNormalizado === nombreNormalizado && contacto.nombreColegio !== nombre) {
+              console.log(`🔗 Asociando contacto ${contacto.nombreCompleto} (${contacto.nombreColegio}) con nuevo colegio ${nombre}`);
+              
+              // Actualizar el nombre del colegio en el contacto
+              contacto.nombreColegio = nombre;
+              await contacto.save();
+              contactosAsociados.push(contacto._id.toString());
+            }
+          } catch (contactError) {
+            console.error(`❌ Error procesando contacto ${contacto._id}:`, contactError);
+            // Continue with other contacts
+          }
         }
+        
+        console.log(`✅ ${contactosAsociados.length} contactos asociados automáticamente`);
+      } catch (associationError) {
+        console.error('❌ Error en asociación de contactos:', associationError);
+        // Continue without failing the university creation
+        contactosAsociados = [];
       }
-      
-      console.log(`✅ ${contactosAsociados.length} contactos asociados automáticamente`);
 
       // Registrar en auditoría
-      await AuditLog.create({
-        usuarioId: new mongoose.Types.ObjectId(req.user!.userId),
-        accion: AccionAudit.CREATE,
-        entidad: EntidadAudit.UNIVERSIDAD,
-        entidadId: nuevaUniversidad._id.toString(),
-        despues: {
-          codigo: nuevaUniversidad.codigo,
-          nombre: nuevaUniversidad.nombre,
-          tipo: nuevaUniversidad.tipo,
-          ciudad: nuevaUniversidad.ciudad,
-          activa: nuevaUniversidad.activa,
-          contactosAsociados: contactosAsociados.length
-        }
-      });
+      try {
+        await AuditLog.create({
+          usuarioId: new mongoose.Types.ObjectId(req.user.userId),
+          accion: AccionAudit.CREATE,
+          entidad: EntidadAudit.UNIVERSIDAD,
+          entidadId: nuevaUniversidad._id.toString(),
+          despues: {
+            codigo: nuevaUniversidad.codigo,
+            nombre: nuevaUniversidad.nombre,
+            tipo: nuevaUniversidad.tipo,
+            ciudad: nuevaUniversidad.ciudad,
+            activa: nuevaUniversidad.activa,
+            contactosAsociados: contactosAsociados.length
+          }
+        });
+        console.log('✅ Auditoría registrada exitosamente');
+      } catch (auditError) {
+        console.error('❌ Error registrando auditoría:', auditError);
+        // Continue without failing the university creation
+      }
 
+      console.log('📤 Enviando respuesta exitosa');
       res.status(201).json({ 
         message: 'Colegio creado exitosamente',
         universidad: nuevaUniversidad,
         contactosAsociados: contactosAsociados.length
       });
-    } catch (error) {
-      console.error('Error al crear universidad:', error);
+    } catch (error: any) {
+      console.error('❌ Error al crear universidad:', error);
+      console.error('❌ Error stack:', error.stack);
+      console.error('❌ Error name:', error.name);
+      console.error('❌ Error message:', error.message);
+      
+      // Check if it's a duplicate key error
+      if (error.code === 11000) {
+        console.log('❌ Error de clave duplicada detectado');
+        return res.status(400).json({ 
+          error: 'Ya existe una universidad con este código o nombre' 
+        });
+      }
+      
       res.status(500).json({ error: 'Error interno del servidor' });
     }
   }
