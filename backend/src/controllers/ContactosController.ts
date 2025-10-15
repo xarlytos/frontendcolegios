@@ -17,7 +17,7 @@ export class ContactosController {
         nombreColegio,
         q,
         page = 1,
-        limit = 20,
+        limit = 999999,
         sortBy = 'fechaAlta',
         sortOrder = 'desc'
       } = req.query;
@@ -570,7 +570,7 @@ export class ContactosController {
         nombreColegio,
         q,
         page = 1,
-        limit = 20,
+        limit = 999999,
         sortBy = 'fechaAlta',
         sortOrder = 'desc'
       } = req.query;

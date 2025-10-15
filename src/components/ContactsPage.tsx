@@ -175,7 +175,7 @@ export default function ContactsPage({
         console.log('➕ Adding new contact', contactData);
         console.log('🔍 onAddContact function:', onAddContact);
         console.log('👤 currentUser:', currentUser);
-        const result = await onAddContact(contactData, currentUser);
+        const result = await onAddContact(contactData);
         console.log('📤 onAddContact result:', result);
       }
       
