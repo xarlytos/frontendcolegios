@@ -90,13 +90,7 @@ const contactoSchema = new Schema<IContacto>({
   timestamps: true
 });
 
-// Validación: debe tener al menos teléfono o instagram
-contactoSchema.pre('save', function(next) {
-  if (!this.telefono && !this.instagram) {
-    return next(new Error('El contacto debe tener al menos teléfono o Instagram'));
-  }
-  next();
-});
+// Teléfono e Instagram son opcionales - no se requiere validación
 
 // Índices
 contactoSchema.index({ nombreColegio: 1 });

@@ -110,10 +110,7 @@ export default function ContactForm({ contact, onSubmit, onCancel }: ContactForm
       newErrors.año_nacimiento = 'El año de nacimiento es requerido y debe estar entre 1900 y el año actual';
     }
 
-    // Validación: al menos uno entre teléfono e Instagram (opcional)
-    if ((!formData.telefono || !formData.telefono.trim()) && (!formData.instagram || !formData.instagram.trim())) {
-      newErrors.contacto = 'Debe proporcionar al menos un número de teléfono o Instagram';
-    }
+    // Teléfono e Instagram son opcionales
 
     // Validaciones de formato
     if (formData.telefono && !validatePhone(formData.telefono)) {

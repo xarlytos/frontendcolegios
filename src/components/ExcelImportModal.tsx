@@ -238,9 +238,7 @@ export default function ExcelImportModal({ isOpen, onClose, onImport, existingCo
       if (!contactData.nombre_colegio) {
         errors.push('El nombre del colegio es obligatorio');
       }
-      if (!contactData.telefono && !contactData.instagram) {
-        errors.push('Se requiere al menos teléfono o Instagram');
-      }
+      // Teléfono e Instagram son opcionales
 
       // Verificar duplicados
       if (contactData.telefono) {
@@ -297,9 +295,7 @@ export default function ExcelImportModal({ isOpen, onClose, onImport, existingCo
       // Validaciones básicas para colegios
       if (!contact.data.nombre) errors.push('El nombre es obligatorio');
       if (!contact.data.nombre_colegio) errors.push('El nombre del colegio es obligatorio');
-      if (!contact.data.telefono && !contact.data.instagram) {
-        errors.push('Se requiere al menos teléfono o Instagram');
-      }
+      // Teléfono e Instagram son opcionales
 
       // Verificar duplicados
       if (contact.data.telefono) {

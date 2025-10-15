@@ -171,13 +171,7 @@ export class ContactosController {
         curso
       } = req.body;
 
-      // Validaciones
-      if (!telefono && !instagram) {
-        return res.status(400).json({
-          success: false,
-          message: 'Debe proporcionar al menos teléfono o Instagram'
-        });
-      }
+      // Teléfono e Instagram son opcionales
 
       const nuevoContacto = new Contacto({
         nombreCompleto,
@@ -490,9 +484,7 @@ export class ContactosController {
             erroresValidacion.push('Nombre completo es requerido');
           }
           
-          if (!data.telefono?.trim() && !data.instagram?.trim()) {
-            erroresValidacion.push('Debe proporcionar al menos teléfono o Instagram');
-          }
+          // Teléfono e Instagram son opcionales
           
           if (!data.nombreColegio?.trim()) {
             erroresValidacion.push('Nombre del colegio es requerido');
