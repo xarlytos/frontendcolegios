@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
-import { Building, Users, Search, Calendar, X, BarChart3, Eye, Edit3, Save, X as XIcon } from 'lucide-react';
+import { Building, Users, Search, Calendar, X, BarChart3, Eye, Edit3, Save, X as XIcon, Plus } from 'lucide-react';
 import graduacionesService, { Graduacion, Contacto } from '../services/graduacionesService';
 import configuracionService from '../services/configuracionService';
+import productosService, { Producto } from '../services/productosService';
 import { useAuth } from '../hooks/useAuth';
 import ContactosModal from './ContactosModal';
+import ProductosModal from './ProductosModal';
 
 interface GraduacionesPageProps {
   currentUser?: any;
@@ -25,6 +27,11 @@ export default function GraduacionesPage({ currentUser }: GraduacionesPageProps)
   const [totalContactos, setTotalContactos] = useState(0);
   const [mostrarContactos, setMostrarContactos] = useState(false);
   const [loadingUsuarios, setLoadingUsuarios] = useState(false);
+  
+  // Estados para productos
+  const [productos, setProductos] = useState<Producto[]>([]);
+  const [productosModal, setProductosModal] = useState(false);
+  const [loadingProductos, setLoadingProductos] = useState(false);
   
   // Estados para modal de contactos
   const [contactosModal, setContactosModal] = useState<{
@@ -67,6 +74,25 @@ export default function GraduacionesPage({ currentUser }: GraduacionesPageProps)
 
     loadComerciales();
   }, [getAllUsers]);
+
+  // Cargar productos
+  useEffect(() => {
+    const loadProductos = async () => {
+      try {
+        setLoadingProductos(true);
+        const response = await productosService.getProductos();
+        if (response.success) {
+          setProductos(response.productos);
+        }
+      } catch (error) {
+        console.error('Error cargando productos:', error);
+      } finally {
+        setLoadingProductos(false);
+      }
+    };
+
+    loadProductos();
+  }, []);
 
   const loadConfiguracionComercial = async () => {
     try {
@@ -392,6 +418,31 @@ export default function GraduacionesPage({ currentUser }: GraduacionesPageProps)
     });
   };
 
+  // Función para abrir modal de productos
+  const abrirModalProductos = () => {
+    setProductosModal(true);
+  };
+
+  // Función para cerrar modal de productos
+  const cerrarModalProductos = () => {
+    setProductosModal(false);
+  };
+
+  // Función para recargar productos después de cambios
+  const recargarProductos = async () => {
+    try {
+      setLoadingProductos(true);
+      const response = await productosService.getProductos();
+      if (response.success) {
+        setProductos(response.productos);
+      }
+    } catch (error) {
+      console.error('Error recargando productos:', error);
+    } finally {
+      setLoadingProductos(false);
+    }
+  };
+
   // Función para guardar cambios automáticamente
   const guardarCampo = async (id: string, campo: string, valor: string) => {
     try {
@@ -671,13 +722,31 @@ export default function GraduacionesPage({ currentUser }: GraduacionesPageProps)
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Filtrar por tipo de producto
               </label>
-              <input
-                type="text"
-                placeholder="Buscar tipo de producto..."
-                value={filtroTipoProducto}
-                onChange={(e) => setFiltroTipoProducto(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
+              <div className="flex gap-2">
+                <select
+                  value={filtroTipoProducto}
+                  onChange={(e) => setFiltroTipoProducto(e.target.value)}
+                  className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  <option value="">Todos los productos</option>
+                  {loadingProductos ? (
+                    <option disabled>Cargando productos...</option>
+                  ) : (
+                    productos.map((producto) => (
+                      <option key={producto._id} value={producto.nombre}>
+                        {producto.nombre}
+                      </option>
+                    ))
+                  )}
+                </select>
+                <button
+                  onClick={abrirModalProductos}
+                  className="flex items-center px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+                  title="Gestionar productos"
+                >
+                  <Plus className="w-4 h-4" />
+                </button>
+              </div>
             </div>
 
             {/* 4. Filtro por previsión */}
@@ -864,24 +933,41 @@ export default function GraduacionesPage({ currentUser }: GraduacionesPageProps)
                         {/* Tipo Producto */}
                         <td className="px-6 py-4 whitespace-nowrap border-r border-gray-200">
                           <div className="relative">
-                            <input
-                              type="text"
-                              value={graduacion.tipoProducto || ''}
-                              onChange={(e) => {
-                                // Actualizar el estado local inmediatamente
-                                setGraduaciones(prev => prev.map(g => 
-                                  g.id === graduacion.id 
-                                    ? { ...g, tipoProducto: e.target.value }
-                                    : g
-                                ));
-                                // Guardar con debounce
-                                guardarCampoConDebounce(graduacion.id, 'tipoProducto', e.target.value);
-                              }}
-                              onBlur={(e) => guardarCampo(graduacion.id, 'tipoProducto', e.target.value)}
-                              className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white hover:bg-gray-50"
-                              placeholder="Tipo de producto"
-                              disabled={savingId === graduacion.id}
-                            />
+                            <div className="flex gap-1">
+                              <select
+                                value={graduacion.tipoProducto || ''}
+                                onChange={(e) => {
+                                  // Actualizar el estado local inmediatamente
+                                  setGraduaciones(prev => prev.map(g => 
+                                    g.id === graduacion.id 
+                                      ? { ...g, tipoProducto: e.target.value }
+                                      : g
+                                  ));
+                                  // Guardar inmediatamente
+                                  guardarCampo(graduacion.id, 'tipoProducto', e.target.value);
+                                }}
+                                className="flex-1 px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white hover:bg-gray-50"
+                                disabled={savingId === graduacion.id}
+                              >
+                                <option value="">Seleccionar producto</option>
+                                {loadingProductos ? (
+                                  <option disabled>Cargando productos...</option>
+                                ) : (
+                                  productos.map((producto) => (
+                                    <option key={producto._id} value={producto.nombre}>
+                                      {producto.nombre}
+                                    </option>
+                                  ))
+                                )}
+                              </select>
+                              <button
+                                onClick={abrirModalProductos}
+                                className="flex items-center px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded hover:bg-blue-200 transition-colors"
+                                title="Gestionar productos"
+                              >
+                                <Plus className="w-3 h-3" />
+                              </button>
+                            </div>
                             {savingId === graduacion.id && (
                               <div className="absolute right-2 top-1/2 transform -translate-y-1/2">
                                 <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600"></div>
@@ -991,6 +1077,16 @@ export default function GraduacionesPage({ currentUser }: GraduacionesPageProps)
         onClose={cerrarModalContactos}
         contactos={contactosModal.contactos}
         nombreColegio={contactosModal.nombreColegio}
+      />
+
+      {/* Modal de productos */}
+      <ProductosModal
+        isOpen={productosModal}
+        onClose={cerrarModalProductos}
+        onProductoSeleccionado={(producto) => {
+          // Recargar productos después de seleccionar uno
+          recargarProductos();
+        }}
       />
     </div>
   );

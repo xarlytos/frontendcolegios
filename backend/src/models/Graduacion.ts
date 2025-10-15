@@ -6,6 +6,7 @@ export interface IGraduacion extends Document {
   anioNacimiento: number;
   responsable?: string;
   tipoProducto?: string;
+  producto?: Types.ObjectId;
   prevision?: string;
   estado?: string;
   observaciones?: string;
@@ -38,6 +39,10 @@ const graduacionSchema = new Schema<IGraduacion>({
     type: String,
     trim: true,
     maxlength: 100
+  },
+  producto: {
+    type: Schema.Types.ObjectId,
+    ref: 'Producto'
   },
   prevision: {
     type: String,
