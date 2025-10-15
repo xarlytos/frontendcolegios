@@ -535,7 +535,7 @@ export default function ContactsPage({
                 </button>
               </div>
               <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
-                <div>
+                <div className="flex items-center space-x-4">
                   <p className="text-sm text-gray-700">
                     Mostrando{' '}
                     <span className="font-medium">{(currentPage - 1) * contactsPerPage + 1}</span>{' '}
@@ -546,6 +546,27 @@ export default function ContactsPage({
                     de{' '}
                     <span className="font-medium">{filteredContacts.length}</span> resultados
                   </p>
+                  
+                  {/* Input para saltar a página específica */}
+                  {totalPages > 10 && (
+                    <div className="flex items-center space-x-2">
+                      <span className="text-sm text-gray-700">Ir a página:</span>
+                      <input
+                        type="number"
+                        min="1"
+                        max={totalPages}
+                        value={currentPage}
+                        onChange={(e) => {
+                          const page = parseInt(e.target.value);
+                          if (page >= 1 && page <= totalPages) {
+                            setCurrentPage(page);
+                          }
+                        }}
+                        className="w-16 px-2 py-1 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      />
+                      <span className="text-sm text-gray-500">de {totalPages}</span>
+                    </div>
+                  )}
                 </div>
                 <div>
                   <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px">
@@ -556,19 +577,79 @@ export default function ContactsPage({
                       >
                         Anterior
                       </button>
-                      {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-                        <button
-                          key={page}
-                          onClick={() => setCurrentPage(page)}
-                          className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
-                            page === currentPage
-                              ? 'z-10 bg-blue-500 border-blue-500 text-blue-600'
-                              : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
-                          }`}
-                        >
-                          {page}
-                        </button>
-                      ))}
+                      {/* Paginación inteligente */}
+                      {(() => {
+                        const maxVisiblePages = 7; // Máximo de páginas visibles
+                        const halfVisible = Math.floor(maxVisiblePages / 2);
+                        let startPage = Math.max(1, currentPage - halfVisible);
+                        let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+                        
+                        // Ajustar si estamos cerca del final
+                        if (endPage - startPage < maxVisiblePages - 1) {
+                          startPage = Math.max(1, endPage - maxVisiblePages + 1);
+                        }
+                        
+                        const pages = [];
+                        
+                        // Botón "Primera página" si no estamos cerca del inicio
+                        if (startPage > 1) {
+                          pages.push(
+                            <button
+                              key="first"
+                              onClick={() => setCurrentPage(1)}
+                              className="relative inline-flex items-center px-4 py-2 border text-sm font-medium bg-white border-gray-300 text-gray-500 hover:bg-gray-50"
+                            >
+                              1
+                            </button>
+                          );
+                          if (startPage > 2) {
+                            pages.push(
+                              <span key="ellipsis1" className="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700">
+                                ...
+                              </span>
+                            );
+                          }
+                        }
+                        
+                        // Páginas visibles
+                        for (let page = startPage; page <= endPage; page++) {
+                          pages.push(
+                            <button
+                              key={page}
+                              onClick={() => setCurrentPage(page)}
+                              className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
+                                page === currentPage
+                                  ? 'z-10 bg-blue-500 border-blue-500 text-white'
+                                  : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
+                              }`}
+                            >
+                              {page}
+                            </button>
+                          );
+                        }
+                        
+                        // Botón "Última página" si no estamos cerca del final
+                        if (endPage < totalPages) {
+                          if (endPage < totalPages - 1) {
+                            pages.push(
+                              <span key="ellipsis2" className="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700">
+                                ...
+                              </span>
+                            );
+                          }
+                          pages.push(
+                            <button
+                              key="last"
+                              onClick={() => setCurrentPage(totalPages)}
+                              className="relative inline-flex items-center px-4 py-2 border text-sm font-medium bg-white border-gray-300 text-gray-500 hover:bg-gray-50"
+                            >
+                              {totalPages}
+                            </button>
+                          );
+                        }
+                        
+                        return pages;
+                      })()}
                       <button
                         onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
                         disabled={currentPage === totalPages}
