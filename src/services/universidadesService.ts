@@ -142,13 +142,18 @@ class UniversidadesService {
 
   // Obtener universidades con estadísticas completas (titulaciones, cursos y alumnos)
   async getUniversidadesConEstadisticas(activa: boolean = true): Promise<UniversidadesConEstadisticasResponse> {
+    console.log('🔄 Obteniendo universidades con estadísticas...');
     const response = await apiService.get<UniversidadesConEstadisticasResponse>(
       `${this.baseUrl}/estadisticas?activa=${activa}`
     );
-    if (!response.data) {
+    console.log('📥 Respuesta de estadísticas:', response);
+    
+    // El endpoint devuelve la respuesta directamente, no envuelta en data
+    const result = response as any;
+    if (!result.universidades) {
       throw new Error('Error al obtener las estadísticas');
     }
-    return response.data;
+    return result;
   }
 
   // Normalizar nombres de colegios existentes
