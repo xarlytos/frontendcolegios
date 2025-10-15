@@ -239,11 +239,12 @@ export default function CountPage({ onNavigateToContacts, currentUser }: CountPa
     // Mapa para normalizar nombres de localidades y mantener el nombre original
     const localidadMap: Record<string, string> = {};
     
-    // Filtrar universidades por régimen y localidad si están seleccionados
+    // Filtrar universidades por régimen, localidad y universidad si están seleccionados
     const universidadesFiltradas = allUniversidades.filter(universidad => {
       if (universidad.activa === false) return false; // Solo colegios activos
       if (selectedRegimen && universidad.tipo !== selectedRegimen) return false; // Filtrar por régimen
       if (selectedLocalidad && universidad.ciudad !== selectedLocalidad) return false; // Filtrar por localidad
+      if (selectedUniversidad && universidad.nombre !== selectedUniversidad) return false; // Filtrar por universidad
       return true;
     });
     
@@ -350,7 +351,7 @@ export default function CountPage({ onNavigateToContacts, currentUser }: CountPa
       // Si ambas son favoritas o ninguna es favorita, ordenar alfabéticamente
       return a.localidad.localeCompare(b.localidad, 'es', { sensitivity: 'base' });
     });
-  }, [filteredContacts, allUniversidades, selectedRegimen, selectedLocalidad, favoriteLocalidades]);
+  }, [filteredContacts, allUniversidades, selectedRegimen, selectedLocalidad, selectedUniversidad, favoriteLocalidades]);
   
 
  
@@ -644,15 +645,15 @@ export default function CountPage({ onNavigateToContacts, currentUser }: CountPa
                 {Object.values(localidadData.colegios).map(colegioData => (
                   <div key={colegioData.colegio} className="bg-white rounded-lg overflow-hidden border border-gray-200">
                     {/* Encabezado del colegio */}
-                    <div className="bg-gradient-to-r from-blue-400 to-blue-500 px-4 py-3 flex items-center justify-between">
+                    <div className="bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between">
                       <div>
-                        <h4 className="text-white text-lg font-semibold">
+                        <h4 className="text-gray-900 text-lg font-semibold">
                           {colegioData.colegio}
-                          <span className="ml-2 text-sm font-normal text-blue-100">
+                          <span className="ml-2 text-sm font-normal text-gray-600">
                             ({colegioData.tipo === 'publica' ? 'Público' : 'Privado'})
                           </span>
                         </h4>
-                        <p className="text-blue-50 text-sm">Total contactos: {colegioData.total}</p>
+                        <p className="text-gray-600 text-sm">Total contactos: {colegioData.total}</p>
                       </div>
                       <button
                         onClick={() => onNavigateToContacts({ nombre_colegio: colegioData.colegio })}
