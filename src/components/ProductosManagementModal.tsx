@@ -21,10 +21,8 @@ export default function ProductosManagementModal({
   
   // Estados para el formulario
   const [nombre, setNombre] = useState('');
-  const [descripcion, setDescripcion] = useState('');
   const [editandoId, setEditandoId] = useState<string | null>(null);
   const [editandoNombre, setEditandoNombre] = useState('');
-  const [editandoDescripcion, setEditandoDescripcion] = useState('');
 
   // Cargar productos al abrir el modal
   useEffect(() => {
@@ -60,13 +58,11 @@ export default function ProductosManagementModal({
       setError(null);
       
       const response = await productosService.crearProducto({
-        nombre: nombre.trim(),
-        descripcion: descripcion.trim() || undefined
+        nombre: nombre.trim()
       });
 
       setProductos(prev => [...prev, response.producto]);
       setNombre('');
-      setDescripcion('');
     } catch (error: any) {
       console.error('Error creando producto:', error);
       setError(error.response?.data?.message || 'Error al crear el producto');
@@ -78,7 +74,6 @@ export default function ProductosManagementModal({
   const handleEditarProducto = (producto: Producto) => {
     setEditandoId(producto._id);
     setEditandoNombre(producto.nombre);
-    setEditandoDescripcion(producto.descripcion || '');
   };
 
   const handleGuardarEdicion = async (id: string) => {
@@ -92,8 +87,7 @@ export default function ProductosManagementModal({
       setError(null);
       
       const response = await productosService.actualizarProducto(id, {
-        nombre: editandoNombre.trim(),
-        descripcion: editandoDescripcion.trim() || undefined
+        nombre: editandoNombre.trim()
       });
 
       setProductos(prev => prev.map(p => 
@@ -102,7 +96,6 @@ export default function ProductosManagementModal({
       
       setEditandoId(null);
       setEditandoNombre('');
-      setEditandoDescripcion('');
     } catch (error: any) {
       console.error('Error actualizando producto:', error);
       setError(error.response?.data?.message || 'Error al actualizar el producto');
@@ -114,7 +107,6 @@ export default function ProductosManagementModal({
   const handleCancelarEdicion = () => {
     setEditandoId(null);
     setEditandoNombre('');
-    setEditandoDescripcion('');
     setError(null);
   };
 
@@ -183,19 +175,6 @@ export default function ProductosManagementModal({
                   disabled={saving}
                 />
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Descripción (opcional)
-                </label>
-                <textarea
-                  value={descripcion}
-                  onChange={(e) => setDescripcion(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="Descripción del producto..."
-                  rows={2}
-                  disabled={saving}
-                />
-              </div>
               <div className="flex justify-end">
                 <button
                   type="submit"
@@ -258,13 +237,6 @@ export default function ProductosManagementModal({
                             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                             disabled={saving}
                           />
-                          <textarea
-                            value={editandoDescripcion}
-                            onChange={(e) => setEditandoDescripcion(e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                            rows={2}
-                            disabled={saving}
-                          />
                           <div className="flex gap-2">
                             <button
                               onClick={() => handleGuardarEdicion(producto._id)}
@@ -291,9 +263,6 @@ export default function ProductosManagementModal({
                         <>
                           <div className="flex-1">
                             <h4 className="font-medium text-gray-900">{producto.nombre}</h4>
-                            {producto.descripcion && (
-                              <p className="text-sm text-gray-500 mt-1">{producto.descripcion}</p>
-                            )}
                           </div>
                           <div className="flex items-center gap-2">
                             {onProductoSeleccionado && (
