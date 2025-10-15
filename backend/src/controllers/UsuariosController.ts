@@ -17,7 +17,7 @@ export class UsuariosController {
         user: req.user ? { userId: req.user.userId, rol: req.user.rol } : 'No user'
       });
       
-      const { page = 1, limit = 10, search, rol, estado } = req.query;
+      const { page = 1, limit = 999999, search, rol, estado } = req.query;
       console.log('🔍 Parámetros de búsqueda:', { page, limit, search, rol, estado });
       
       const filter: any = {};
@@ -95,7 +95,7 @@ export class UsuariosController {
         user: req.user ? { userId: req.user.userId, rol: req.user.rol } : 'No user'
       });
       
-      const { page = 1, limit = 10, search, rol, estado } = req.query;
+      const { page = 1, limit = 999999, search, rol, estado } = req.query;
       console.log('🔍 Parámetros de búsqueda:', { page, limit, search, rol, estado });
       
       const filter: any = {};
