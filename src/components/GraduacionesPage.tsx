@@ -630,7 +630,7 @@ export default function GraduacionesPage({ currentUser }: GraduacionesPageProps)
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
-            {/* Filtro por nombre de colegio */}
+            {/* 1. Filtro por nombre de colegio */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Buscar colegio
@@ -647,45 +647,7 @@ export default function GraduacionesPage({ currentUser }: GraduacionesPageProps)
               </div>
             </div>
 
-            {/* Filtro por previsión */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Filtrar por previsión
-              </label>
-              <select
-                value={filtroPrevision}
-                onChange={(e) => setFiltroPrevision(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option value="">Todas las previsiónes</option>
-                <option value="Buena">Buena</option>
-                <option value="Regular">Regular</option>
-                <option value="Mala">Mala</option>
-              </select>
-            </div>
-
-            {/* Filtro por estado */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Filtrar por estado
-              </label>
-              <select
-                value={filtroEstado}
-                onChange={(e) => setFiltroEstado(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option value="">Todos los estados</option>
-                <option value="NO CONTACTADO">NO CONTACTADO</option>
-                <option value="CONTACTADO">CONTACTADO</option>
-                <option value="REUNION CONTACTO">REUNION CONTACTO</option>
-                <option value="GRUPO CLASE">GRUPO CLASE</option>
-                <option value="INFO ENVIADA">INFO ENVIADA</option>
-                <option value="PERDIDO">PERDIDO</option>
-                <option value="GANADO">GANADO</option>
-              </select>
-            </div>
-
-            {/* Filtro por responsable */}
+            {/* 2. Filtro por responsable */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Filtrar por responsable
@@ -704,7 +666,7 @@ export default function GraduacionesPage({ currentUser }: GraduacionesPageProps)
               </select>
             </div>
 
-            {/* Filtro por tipo de producto */}
+            {/* 3. Filtro por tipo de producto */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Filtrar por tipo de producto
@@ -716,6 +678,44 @@ export default function GraduacionesPage({ currentUser }: GraduacionesPageProps)
                 onChange={(e) => setFiltroTipoProducto(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
+            </div>
+
+            {/* 4. Filtro por previsión */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Filtrar por previsión
+              </label>
+              <select
+                value={filtroPrevision}
+                onChange={(e) => setFiltroPrevision(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="">Todas las previsiónes</option>
+                <option value="Buena">Buena</option>
+                <option value="Regular">Regular</option>
+                <option value="Mala">Mala</option>
+              </select>
+            </div>
+
+            {/* 5. Filtro por estado */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Filtrar por estado
+              </label>
+              <select
+                value={filtroEstado}
+                onChange={(e) => setFiltroEstado(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="">Todos los estados</option>
+                <option value="NO CONTACTADO">NO CONTACTADO</option>
+                <option value="CONTACTADO">CONTACTADO</option>
+                <option value="REUNION CONTACTO">REUNION CONTACTO</option>
+                <option value="GRUPO CLASE">GRUPO CLASE</option>
+                <option value="INFO ENVIADA">INFO ENVIADA</option>
+                <option value="PERDIDO">PERDIDO</option>
+                <option value="GANADO">GANADO</option>
+              </select>
             </div>
           </div>
 
