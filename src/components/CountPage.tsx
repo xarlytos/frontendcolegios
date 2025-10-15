@@ -15,6 +15,7 @@ export default function CountPage({ onNavigateToContacts, currentUser }: CountPa
   const [selectedUniversidad, setSelectedUniversidad] = useState<string>('');
   const [selectedRegimen, setSelectedRegimen] = useState<string>('');
   const [selectedLocalidad, setSelectedLocalidad] = useState<string>('');
+  const [favoriteLocalidades, setFavoriteLocalidades] = useState<string[]>([]);
   const [allUniversidades, setAllUniversidades] = useState<UniversidadConEstadisticas[]>([]);
   const [loadingUniversidades, setLoadingUniversidades] = useState<boolean>(true);
   const [estadisticasGenerales, setEstadisticasGenerales] = useState<any>(null);
@@ -321,9 +322,21 @@ export default function CountPage({ onNavigateToContacts, currentUser }: CountPa
         (localidades[localidadKey].colegios[colegio].porComercial[comercialNombre] || 0) + 1;
     });
     
-    // Convertir a array y ordenar por localidad
-    return Object.values(localidades).sort((a, b) => a.localidad.localeCompare(b.localidad, 'es', { sensitivity: 'base' }));
-  }, [filteredContacts, allUniversidades, selectedRegimen, selectedLocalidad]);
+    // Convertir a array y ordenar: favoritos primero, luego alfabéticamente
+    const localidadesArray = Object.values(localidades);
+    
+    return localidadesArray.sort((a, b) => {
+      const aIsFavorite = favoriteLocalidades.includes(a.localidad);
+      const bIsFavorite = favoriteLocalidades.includes(b.localidad);
+      
+      // Si una es favorita y la otra no, la favorita va primero
+      if (aIsFavorite && !bIsFavorite) return -1;
+      if (!aIsFavorite && bIsFavorite) return 1;
+      
+      // Si ambas son favoritas o ninguna es favorita, ordenar alfabéticamente
+      return a.localidad.localeCompare(b.localidad, 'es', { sensitivity: 'base' });
+    });
+  }, [filteredContacts, allUniversidades, selectedRegimen, selectedLocalidad, favoriteLocalidades]);
   
 
  
@@ -436,7 +449,7 @@ export default function CountPage({ onNavigateToContacts, currentUser }: CountPa
               onFocus={handleColegioInputFocus}
               onBlur={handleColegioInputBlur}
               placeholder={loadingUniversidades ? 'Cargando colegios...' : 'Escribir nombre del colegio...'}
-              className="w-full border border-blue-300 bg-blue-50 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-400 focus:border-blue-400 text-blue-900 placeholder-blue-400"
+              className="w-full border border-gray-300 bg-white rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-400 focus:border-blue-400 text-gray-900 placeholder-gray-400"
               disabled={loadingUniversidades}
             />
             
@@ -508,6 +521,61 @@ export default function CountPage({ onNavigateToContacts, currentUser }: CountPa
                 ));
               })()}
             </select>
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Favoritos
+            </label>
+            <select
+              value=""
+              onChange={(e) => {
+                const localidad = e.target.value;
+                if (localidad && !favoriteLocalidades.includes(localidad)) {
+                  setFavoriteLocalidades([...favoriteLocalidades, localidad]);
+                }
+              }}
+              className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              <option value="">Añadir localidad a favoritos</option>
+              {(() => {
+                const ciudades = Array.from(new Set(allUniversidades
+                  .filter(uni => uni.activa !== false)
+                  .map(uni => uni.ciudad)
+                  .filter(Boolean)
+                )).sort();
+                return ciudades
+                  .filter(ciudad => ciudad && !favoriteLocalidades.includes(ciudad))
+                  .map(ciudad => (
+                    <option key={ciudad} value={ciudad}>{ciudad}</option>
+                  ));
+              })()}
+            </select>
+            
+            {/* Mostrar favoritos actuales */}
+            {favoriteLocalidades.length > 0 && (
+              <div className="mt-2">
+                <div className="text-xs text-gray-600 mb-1">Favoritos actuales:</div>
+                <div className="flex flex-wrap gap-1">
+                  {favoriteLocalidades.map((localidad, index) => (
+                    <span
+                      key={localidad}
+                      className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-800"
+                    >
+                      {localidad}
+                      <button
+                        onClick={() => {
+                          setFavoriteLocalidades(favoriteLocalidades.filter((_, i) => i !== index));
+                        }}
+                        className="ml-1 text-blue-600 hover:text-blue-800"
+                      >
+                        ×
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
