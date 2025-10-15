@@ -20,6 +20,8 @@ export default function GraduacionesPage({ currentUser }: GraduacionesPageProps)
   const [searchTerm, setSearchTerm] = useState('');
   const [filtroPrevision, setFiltroPrevision] = useState('');
   const [filtroEstado, setFiltroEstado] = useState('');
+  const [filtroResponsable, setFiltroResponsable] = useState('');
+  const [filtroTipoProducto, setFiltroTipoProducto] = useState('');
   const [totalContactos, setTotalContactos] = useState(0);
   const [mostrarContactos, setMostrarContactos] = useState(false);
   const [loadingUsuarios, setLoadingUsuarios] = useState(false);
@@ -366,8 +368,10 @@ export default function GraduacionesPage({ currentUser }: GraduacionesPageProps)
     const matchesNombre = graduacion.nombreColegio.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesPrevision = !filtroPrevision || graduacion.prevision === filtroPrevision;
     const matchesEstado = !filtroEstado || graduacion.estado === filtroEstado;
+    const matchesResponsable = !filtroResponsable || graduacion.responsable === filtroResponsable;
+    const matchesTipoProducto = !filtroTipoProducto || graduacion.tipoProducto?.toLowerCase().includes(filtroTipoProducto.toLowerCase());
     
-    return matchesNombre && matchesPrevision && matchesEstado;
+    return matchesNombre && matchesPrevision && matchesEstado && matchesResponsable && matchesTipoProducto;
   });
 
   // Función para abrir modal de contactos
@@ -625,7 +629,7 @@ export default function GraduacionesPage({ currentUser }: GraduacionesPageProps)
             <h3 className="text-lg font-medium text-gray-900">Búsqueda y Filtros</h3>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
             {/* Filtro por nombre de colegio */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -680,16 +684,51 @@ export default function GraduacionesPage({ currentUser }: GraduacionesPageProps)
                 <option value="GANADO">GANADO</option>
               </select>
             </div>
+
+            {/* Filtro por responsable */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Filtrar por responsable
+              </label>
+              <select
+                value={filtroResponsable}
+                onChange={(e) => setFiltroResponsable(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="">Todos los responsables</option>
+                {users.map((usuario) => (
+                  <option key={usuario.id} value={usuario.nombre}>
+                    {usuario.nombre}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Filtro por tipo de producto */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Filtrar por tipo de producto
+              </label>
+              <input
+                type="text"
+                placeholder="Buscar tipo de producto..."
+                value={filtroTipoProducto}
+                onChange={(e) => setFiltroTipoProducto(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
           </div>
 
           {/* Botón para limpiar filtros */}
-          {(searchTerm || filtroPrevision || filtroEstado) && (
+          {(searchTerm || filtroPrevision || filtroEstado || filtroResponsable || filtroTipoProducto) && (
             <div className="mt-4 flex justify-end">
               <button
                 onClick={() => {
                   setSearchTerm('');
                   setFiltroPrevision('');
                   setFiltroEstado('');
+                  setFiltroResponsable('');
+                  setFiltroTipoProducto('');
                 }}
                 className="flex items-center px-3 py-2 text-sm text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-md transition-colors"
               >
